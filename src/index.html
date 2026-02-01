@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Feeding Caiso - Save the Villagers!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 4/3;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(108, 92, 231, 0.3);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Mobile touch button */
+        #touchFeedBtn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: 'Fredoka One', cursive;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(108, 92, 231, 0.5);
+            transition: transform 0.1s, box-shadow 0.1s;
+            z-index: 100;
+            display: none;
+        }
+
+        #touchFeedBtn:active {
+            transform: translateX(-50%) scale(0.95);
+            box-shadow: 0 2px 10px rgba(108, 92, 231, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            #touchFeedBtn {
+                display: block;
+            }
+        }
+
+        /* Loading screen */
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px;
+            z-index: 1000;
+        }
+
+        .loading-text {
+            font-family: 'Fredoka One', cursive;
+            font-size: 32px;
+            color: #a29bfe;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <button id="touchFeedBtn">FEED!</button>
+        <div id="loadingScreen">
+            <div class="loading-text">Loading...</div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // FEEDING CAISO - Main Game Script
+        // ============================================
+
+        // Game Constants
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
+        const VILLAGER_CONSUME_INTERVAL = 2000; // 2 seconds
+        const COMBO_TIMEOUT = 1500; // 1.5 seconds to maintain combo
+
+        // Food definitions
+        const FOODS = {
+            apple: {
+                name: 'Apple',
+                emoji: String.fromCodePoint(0x1F34E),
+                hungerReduction: 0.3,
+                unlockLevel: 1,
+                color: '#ff6b6b',
+                key: '1'
+            },
+            dorito: {
+                name: 'Dorito',
+                emoji: String.fromCodePoint(0x1F336),
+                hungerReduction: 0.5,
+                unlockLevel: 10,
+                color: '#ff9f43',
+                key: '2'
+            },
+            burger: {
+                name: 'Burger',
+                emoji: String.fromCodePoint(0x1F354),
+                hungerReduction: 1.0,
+                unlockLevel: 20,
+                color: '#feca57',
+                key: '3'
+            },
+            dynamite: {
+                name: 'Dynamite',
+                emoji: String.fromCodePoint(0x1F9E8),
+                hungerReduction: 5.0,
+                unlockLevel: 30,
+                color: '#ff4757',
+                key: '4'
+            },
+            pizza: {
+                name: 'Pizza',
+                emoji: String.fromCodePoint(0x1F355),
+                hungerReduction: 2.0,
+                unlockLevel: 50,
+                color: '#ffa502',
+                key: '5'
+            },
+            watermelon: {
+                name: 'Watermelon',
+                emoji: String.fromCodePoint(0x1F349),
+                hungerReduction: 7.0,
+                unlockLevel: 100,
+                color: '#2ed573',
+                key: '6'
+            }
+        };
+
+        // Game State
+        class Game {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.canvas.width = GAME_WIDTH;
+                this.canvas.height = GAME_HEIGHT;
+
+                this.state = 'menu'; // menu, playing, paused, gameover, victory
+                this.hunger = 100;
+                this.villagers = 100;
+                this.level = 1;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.totalHungerReduced = 0;
+                this.selectedFoodKey = 'apple';
+                this.gameTime = 0;
+
+                this.lastTime = 0;
+                this.villagerTimer = 0;
+                this.comboTimer = 0;
+
+                this.flyingFoods = [];
+                this.particles = [];
+                this.floatingTexts = [];
+
+                this.caiso = new Caiso(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30);
+
+                this.setupEventListeners();
+                this.hideLoading();
+            }
+
+            hideLoading() {
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                }, 500);
+            }
+
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+                document.getElementById('touchFeedBtn').addEventListener('click', () => this.feedCaiso());
+                this.canvas.addEventListener('click', (e) => this.handleClick(e));
+            }
+
+            handleKeyDown(e) {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    if (this.state === 'menu') {
+                        this.startGame();
+                    } else if (this.state === 'playing') {
+                        this.feedCaiso();
+                    }
+                } else if (e.code === 'KeyR') {
+                    if (this.state === 'gameover' || this.state === 'victory') {
+                        this.startGame();
+                    }
+                } else if (e.code === 'KeyC' || e.code === 'KeyP') {
+                    if (this.state === 'playing') {
+                        this.state = 'paused';
+                    } else if (this.state === 'paused') {
+                        this.state = 'playing';
+                    }
+                } else if (e.key >= '1' && e.key <= '6') {
+                    this.selectFoodByKey(e.key);
+                }
+            }
+
+            handleClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+
+                if (this.state === 'menu') {
+                    this.startGame();
+                } else if (this.state === 'gameover' || this.state === 'victory') {
+                    this.startGame();
+                } else if (this.state === 'paused') {
+                    // Check food selection clicks
+                    this.handleFoodMenuClick(x, y);
+                }
+            }
+
+            handleFoodMenuClick(x, y) {
+                const foods = Object.entries(FOODS);
+                const startY = 200;
+                const itemHeight = 50;
+
+                foods.forEach(([key, food], index) => {
+                    const itemY = startY + index * itemHeight;
+                    if (y >= itemY && y <= itemY + itemHeight && food.unlockLevel <= this.level) {
+                        this.selectedFoodKey = key;
+                    }
+                });
+            }
+
+            selectFoodByKey(key) {
+                const foodEntries = Object.entries(FOODS);
+                const index = parseInt(key) - 1;
+                if (index >= 0 && index < foodEntries.length) {
+                    const [foodKey, food] = foodEntries[index];
+                    if (food.unlockLevel <= this.level) {
+                        this.selectedFoodKey = foodKey;
+                    }
+                }
+            }
+
+            startGame() {
+                this.state = 'playing';
+                this.hunger = 100;
+                this.villagers = 100;
+                this.level = 1;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.totalHungerReduced = 0;
+                this.selectedFoodKey = 'apple';
+                this.gameTime = 0;
+                this.villagerTimer = 0;
+                this.comboTimer = 0;
+                this.flyingFoods = [];
+                this.particles = [];
+                this.floatingTexts = [];
+                this.caiso.reset();
+            }
+
+            feedCaiso() {
+                if (this.state !== 'playing') return;
+
+                const food = FOODS[this.selectedFoodKey];
+                if (food.unlockLevel > this.level) return;
+
+                // Create flying food
+                const startX = GAME_WIDTH / 2;
+                const startY = GAME_HEIGHT - 50;
+                const endX = this.caiso.x;
+                const endY = this.caiso.y + 20;
+
+                this.flyingFoods.push(new FlyingFood(food, startX, startY, endX, endY));
+
+                // Reset combo timer
+                this.comboTimer = COMBO_TIMEOUT;
+            }
+
+            consumeFood(food) {
+                // Calculate hunger reduction with combo multiplier
+                const multiplier = this.getComboMultiplier();
+                const reduction = food.hungerReduction * multiplier;
+
+                this.hunger = Math.max(0, this.hunger - reduction);
+                this.totalHungerReduced += reduction;
+
+                // Increase combo
+                this.combo++;
+                if (this.combo > this.maxCombo) {
+                    this.maxCombo = this.combo;
+                }
+
+                // Check level up
+                const newLevel = Math.floor(this.totalHungerReduced / 5) + 1;
+                if (newLevel > this.level) {
+                    this.levelUp(newLevel);
+                }
+
+                // Visual feedback
+                this.addFloatingText(`-${reduction.toFixed(1)}%`, this.caiso.x, this.caiso.y - 50, '#2ed573');
+                if (this.combo >= 3) {
+                    this.addFloatingText(`${this.combo}x COMBO!`, this.caiso.x, this.caiso.y - 80, '#ffa502');
+                }
+                this.addParticles(this.caiso.x, this.caiso.y, food.color, 10);
+
+                // Caiso animation
+                this.caiso.eat();
+
+                // Check win condition
+                if (this.hunger <= 0) {
+                    this.state = 'victory';
+                    this.addParticles(GAME_WIDTH / 2, GAME_HEIGHT / 2, '#ffd700', 50);
+                }
+            }
+
+            levelUp(newLevel) {
+                this.level = newLevel;
+                this.addFloatingText(`LEVEL ${newLevel}!`, GAME_WIDTH / 2, 150, '#00d2d3');
+                this.addParticles(GAME_WIDTH / 2, 100, '#00d2d3', 30);
+
+                // Check for food unlocks
+                Object.entries(FOODS).forEach(([key, food]) => {
+                    if (food.unlockLevel === newLevel) {
+                        this.addFloatingText(`${food.emoji} UNLOCKED!`, GAME_WIDTH / 2, 200, food.color);
+                    }
+                });
+            }
+
+            getComboMultiplier() {
+                if (this.combo >= 10) return 3.0;
+                if (this.combo >= 5) return 2.0;
+                if (this.combo >= 3) return 1.5;
+                return 1.0;
+            }
+
+            consumeVillager() {
+                if (this.villagers > 0) {
+                    this.villagers--;
+                    this.addFloatingText('-1', 100, GAME_HEIGHT - 80, '#ff4757');
+                    this.caiso.showGuilty();
+
+                    if (this.villagers <= 0) {
+                        this.state = 'gameover';
+                    }
+                }
+            }
+
+            addFloatingText(text, x, y, color) {
+                this.floatingTexts.push({
+                    text, x, y, color,
+                    alpha: 1,
+                    vy: -2,
+                    life: 60
+                });
+            }
+
+            addParticles(x, y, color, count) {
+                for (let i = 0; i < count; i++) {
+                    this.particles.push({
+                        x, y,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10 - 5,
+                        color,
+                        size: Math.random() * 8 + 4,
+                        life: 40 + Math.random() * 20
+                    });
+                }
+            }
+
+            update(deltaTime) {
+                if (this.state !== 'playing') return;
+
+                this.gameTime += deltaTime;
+
+                // Villager consumption timer
+                this.villagerTimer += deltaTime;
+                if (this.villagerTimer >= VILLAGER_CONSUME_INTERVAL) {
+                    this.villagerTimer = 0;
+                    this.consumeVillager();
+                }
+
+                // Combo timer
+                if (this.comboTimer > 0) {
+                    this.comboTimer -= deltaTime;
+                    if (this.comboTimer <= 0) {
+                        this.combo = 0;
+                    }
+                }
+
+                // Update Caiso
+                this.caiso.update(deltaTime);
+
+                // Update flying foods
+                this.flyingFoods.forEach((food, index) => {
+                    food.update(deltaTime);
+                    if (food.arrived) {
+                        this.consumeFood(food.foodData);
+                        this.flyingFoods.splice(index, 1);
+                    }
+                });
+
+                // Update particles
+                this.particles = this.particles.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.3; // gravity
+                    p.life--;
+                    return p.life > 0;
+                });
+
+                // Update floating texts
+                this.floatingTexts = this.floatingTexts.filter(t => {
+                    t.y += t.vy;
+                    t.alpha -= 0.015;
+                    t.life--;
+                    return t.life > 0;
+                });
+            }
+
+            render() {
+                const ctx = this.ctx;
+
+                // Clear and draw background
+                this.drawBackground();
+
+                if (this.state === 'menu') {
+                    this.drawMenuScreen();
+                } else if (this.state === 'playing' || this.state === 'paused') {
+                    this.drawGame();
+                    if (this.state === 'paused') {
+                        this.drawPauseMenu();
+                    }
+                } else if (this.state === 'gameover') {
+                    this.drawGameOverScreen();
+                } else if (this.state === 'victory') {
+                    this.drawVictoryScreen();
+                }
+            }
+
+            drawBackground() {
+                const ctx = this.ctx;
+                const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+                gradient.addColorStop(0, '#1a1a2e');
+                gradient.addColorStop(0.5, '#16213e');
+                gradient.addColorStop(1, '#0f3460');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+                // Draw stars
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                for (let i = 0; i < 50; i++) {
+                    const x = (i * 73) % GAME_WIDTH;
+                    const y = (i * 47) % (GAME_HEIGHT / 2);
+                    const size = (i % 3) + 1;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            drawGame() {
+                const ctx = this.ctx;
+
+                // Draw villager timer indicator
+                const timerProgress = this.villagerTimer / VILLAGER_CONSUME_INTERVAL;
+                ctx.fillStyle = `rgba(255, 71, 87, ${0.3 + timerProgress * 0.4})`;
+                ctx.fillRect(0, GAME_HEIGHT - 10, GAME_WIDTH * timerProgress, 10);
+
+                // Draw Caiso
+                this.caiso.draw(ctx);
+
+                // Draw flying foods
+                this.flyingFoods.forEach(food => food.draw(ctx));
+
+                // Draw particles
+                this.particles.forEach(p => {
+                    ctx.globalAlpha = p.life / 60;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+
+                // Draw floating texts
+                this.floatingTexts.forEach(t => {
+                    ctx.globalAlpha = t.alpha;
+                    ctx.fillStyle = t.color;
+                    ctx.font = 'bold 24px Fredoka One';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(t.text, t.x, t.y);
+                });
+                ctx.globalAlpha = 1;
+
+                // Draw UI
+                this.drawUI();
+            }
+
+            drawUI() {
+                const ctx = this.ctx;
+
+                // Hunger bar background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                roundRect(ctx, 50, 20, GAME_WIDTH - 100, 40, 10);
+                ctx.fill();
+
+                // Hunger bar fill
+                const hungerWidth = (GAME_WIDTH - 110) * (this.hunger / 100);
+                const hungerGradient = ctx.createLinearGradient(55, 0, 55 + hungerWidth, 0);
+                if (this.hunger > 50) {
+                    hungerGradient.addColorStop(0, '#ff6b6b');
+                    hungerGradient.addColorStop(1, '#ff4757');
+                } else if (this.hunger > 25) {
+                    hungerGradient.addColorStop(0, '#ffa502');
+                    hungerGradient.addColorStop(1, '#ff7f50');
+                } else {
+                    hungerGradient.addColorStop(0, '#2ed573');
+                    hungerGradient.addColorStop(1, '#26de81');
+                }
+                ctx.fillStyle = hungerGradient;
+                roundRect(ctx, 55, 25, hungerWidth, 30, 8);
+                ctx.fill();
+
+                // Hunger text
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText(`HUNGER: ${this.hunger.toFixed(1)}%`, GAME_WIDTH / 2, 48);
+
+                // Level indicator
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                roundRect(ctx, 20, 70, 120, 40, 10);
+                ctx.fill();
+                ctx.fillStyle = '#00d2d3';
+                ctx.font = 'bold 22px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText(`LVL: ${this.level}`, 80, 98);
+
+                // Combo indicator
+                if (this.combo > 0) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    roundRect(ctx, GAME_WIDTH - 150, 70, 130, 50, 10);
+                    ctx.fill();
+
+                    const comboColor = this.combo >= 10 ? '#ff4757' :
+                                       this.combo >= 5 ? '#ffa502' :
+                                       this.combo >= 3 ? '#ffd32a' : '#fff';
+                    ctx.fillStyle = comboColor;
+                    ctx.font = 'bold 18px Fredoka One';
+                    ctx.textAlign = 'center';
+
+                    if (this.combo >= 10) {
+                        ctx.fillText('FRENZY!', GAME_WIDTH - 85, 93);
+                        ctx.fillText(`x${this.getComboMultiplier()}`, GAME_WIDTH - 85, 113);
+                    } else {
+                        ctx.fillText(`COMBO x${this.combo}`, GAME_WIDTH - 85, 100);
+                    }
+                }
+
+                // Villager counter
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                roundRect(ctx, 20, GAME_HEIGHT - 80, 140, 60, 10);
+                ctx.fill();
+
+                const villagerColor = this.villagers > 50 ? '#2ed573' :
+                                      this.villagers > 25 ? '#ffa502' : '#ff4757';
+                ctx.fillStyle = villagerColor;
+                ctx.font = 'bold 28px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${String.fromCodePoint(0x1F465)} ${this.villagers}`, 90, GAME_HEIGHT - 42);
+                ctx.font = '16px Nunito';
+                ctx.fillText('PEOPLE', 90, GAME_HEIGHT - 25);
+
+                // Food selection panel
+                this.drawFoodPanel();
+
+                // Controls hint
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.font = '14px Nunito';
+                ctx.textAlign = 'center';
+                ctx.fillText('SPACE: Feed | C: Menu | 1-6: Select Food', GAME_WIDTH / 2, GAME_HEIGHT - 15);
+            }
+
+            drawFoodPanel() {
+                const ctx = this.ctx;
+                const panelX = GAME_WIDTH - 200;
+                const panelY = GAME_HEIGHT - 100;
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                roundRect(ctx, panelX, panelY, 180, 80, 10);
+                ctx.fill();
+
+                const foods = Object.entries(FOODS);
+                const itemSize = 45;
+                let col = 0;
+                let row = 0;
+
+                foods.forEach(([key, food], index) => {
+                    const x = panelX + 15 + col * 55;
+                    const y = panelY + 10 + row * 38;
+
+                    const isUnlocked = food.unlockLevel <= this.level;
+                    const isSelected = key === this.selectedFoodKey;
+
+                    // Draw food item background
+                    if (isSelected && isUnlocked) {
+                        ctx.fillStyle = 'rgba(108, 92, 231, 0.5)';
+                        roundRect(ctx, x - 5, y - 5, 50, 35, 5);
+                        ctx.fill();
+                    }
+
+                    // Draw food emoji or lock
+                    ctx.font = '24px Arial';
+                    ctx.textAlign = 'center';
+                    if (isUnlocked) {
+                        ctx.fillText(food.emoji, x + 20, y + 22);
+                    } else {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        ctx.fillText(String.fromCodePoint(0x1F512), x + 20, y + 22);
+                    }
+
+                    col++;
+                    if (col >= 3) {
+                        col = 0;
+                        row++;
+                    }
+                });
+            }
+
+            drawMenuScreen() {
+                const ctx = this.ctx;
+
+                // Draw Caiso in menu
+                this.caiso.draw(ctx);
+
+                // Title
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 56px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText('FEEDING CAISO', GAME_WIDTH / 2, 100);
+
+                ctx.font = 'bold 24px Fredoka One';
+                ctx.fillStyle = '#a29bfe';
+                ctx.fillText('Save the Villagers!', GAME_WIDTH / 2, 140);
+
+                // Instructions
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                roundRect(ctx, GAME_WIDTH / 2 - 200, GAME_HEIGHT - 200, 400, 150, 15);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px Nunito';
+                ctx.fillText('Feed Caiso before it eats all the villagers!', GAME_WIDTH / 2, GAME_HEIGHT - 165);
+                ctx.fillText('Reduce hunger to 0% to WIN!', GAME_WIDTH / 2, GAME_HEIGHT - 140);
+                ctx.fillText('Every 2 seconds, Caiso eats a villager...', GAME_WIDTH / 2, GAME_HEIGHT - 115);
+
+                // Start prompt
+                ctx.font = 'bold 28px Fredoka One';
+                ctx.fillStyle = '#ffd32a';
+                const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+                ctx.globalAlpha = pulse;
+                ctx.fillText('PRESS SPACE OR TAP TO START', GAME_WIDTH / 2, GAME_HEIGHT - 60);
+                ctx.globalAlpha = 1;
+            }
+
+            drawPauseMenu() {
+                const ctx = this.ctx;
+
+                // Dim background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+                // Menu panel
+                ctx.fillStyle = 'rgba(45, 52, 54, 0.95)';
+                roundRect(ctx, GAME_WIDTH / 2 - 200, 100, 400, 400, 20);
+                ctx.fill();
+
+                // Title
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 32px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText('CHOOSE FOOD', GAME_WIDTH / 2, 150);
+
+                // Food list
+                const foods = Object.entries(FOODS);
+                foods.forEach(([key, food], index) => {
+                    const y = 200 + index * 50;
+                    const isUnlocked = food.unlockLevel <= this.level;
+                    const isSelected = key === this.selectedFoodKey;
+
+                    // Background
+                    ctx.fillStyle = isSelected ? 'rgba(108, 92, 231, 0.5)' : 'rgba(0, 0, 0, 0.3)';
+                    roundRect(ctx, GAME_WIDTH / 2 - 170, y - 15, 340, 40, 8);
+                    ctx.fill();
+
+                    // Food info
+                    ctx.font = '24px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = isUnlocked ? '#fff' : '#666';
+                    ctx.fillText(food.emoji, GAME_WIDTH / 2 - 150, y + 10);
+
+                    ctx.font = '18px Nunito';
+                    ctx.fillText(food.name, GAME_WIDTH / 2 - 110, y + 8);
+
+                    ctx.textAlign = 'right';
+                    if (isUnlocked) {
+                        ctx.fillStyle = '#2ed573';
+                        ctx.fillText(`-${food.hungerReduction}%`, GAME_WIDTH / 2 + 100, y + 8);
+                        ctx.fillStyle = '#a29bfe';
+                        ctx.fillText(`[${food.key}]`, GAME_WIDTH / 2 + 150, y + 8);
+                    } else {
+                        ctx.fillStyle = '#ff4757';
+                        ctx.fillText(`Lv.${food.unlockLevel}`, GAME_WIDTH / 2 + 150, y + 8);
+                    }
+                });
+
+                // Close hint
+                ctx.fillStyle = '#a29bfe';
+                ctx.font = '18px Nunito';
+                ctx.textAlign = 'center';
+                ctx.fillText('Press C to close', GAME_WIDTH / 2, 480);
+            }
+
+            drawGameOverScreen() {
+                const ctx = this.ctx;
+
+                // Background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+                // Sad Caiso
+                this.caiso.expression = 'sad';
+                this.caiso.draw(ctx);
+
+                // Title
+                ctx.fillStyle = '#ff4757';
+                ctx.font = 'bold 56px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', GAME_WIDTH / 2, 100);
+
+                // Stats
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                roundRect(ctx, GAME_WIDTH / 2 - 150, GAME_HEIGHT - 220, 300, 120, 15);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px Nunito';
+                ctx.fillText(`Final Level: ${this.level}`, GAME_WIDTH / 2, GAME_HEIGHT - 180);
+                ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_WIDTH / 2, GAME_HEIGHT - 150);
+                ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_WIDTH / 2, GAME_HEIGHT - 120);
+
+                // Restart prompt
+                ctx.font = 'bold 24px Fredoka One';
+                ctx.fillStyle = '#ffd32a';
+                ctx.fillText('PRESS R OR TAP TO RETRY', GAME_WIDTH / 2, GAME_HEIGHT - 50);
+            }
+
+            drawVictoryScreen() {
+                const ctx = this.ctx;
+
+                // Celebratory background
+                ctx.fillStyle = 'rgba(46, 213, 115, 0.2)';
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+                // Draw particles
+                this.particles.forEach(p => {
+                    ctx.globalAlpha = p.life / 60;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+
+                // Happy Caiso
+                this.caiso.expression = 'happy';
+                this.caiso.draw(ctx);
+
+                // Title
+                ctx.fillStyle = '#2ed573';
+                ctx.font = 'bold 56px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText('YOU WIN!', GAME_WIDTH / 2, 100);
+
+                ctx.fillStyle = '#ffd32a';
+                ctx.font = 'bold 24px Fredoka One';
+                ctx.fillText('Caiso is full! Villagers are safe!', GAME_WIDTH / 2, 140);
+
+                // Stats
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                roundRect(ctx, GAME_WIDTH / 2 - 150, GAME_HEIGHT - 220, 300, 140, 15);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px Nunito';
+                ctx.fillText(`Final Level: ${this.level}`, GAME_WIDTH / 2, GAME_HEIGHT - 180);
+                ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_WIDTH / 2, GAME_HEIGHT - 150);
+                ctx.fillText(`Villagers Saved: ${this.villagers}`, GAME_WIDTH / 2, GAME_HEIGHT - 120);
+                ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_WIDTH / 2, GAME_HEIGHT - 90);
+
+                // Restart prompt
+                ctx.font = 'bold 24px Fredoka One';
+                ctx.fillStyle = '#ffd32a';
+                ctx.fillText('PRESS R OR TAP TO PLAY AGAIN', GAME_WIDTH / 2, GAME_HEIGHT - 30);
+
+                // Keep adding particles for celebration
+                if (Math.random() < 0.1) {
+                    this.addParticles(
+                        Math.random() * GAME_WIDTH,
+                        Math.random() * GAME_HEIGHT / 2,
+                        ['#ffd32a', '#2ed573', '#ff6b6b', '#a29bfe'][Math.floor(Math.random() * 4)],
+                        5
+                    );
+                }
+            }
+
+            gameLoop(timestamp) {
+                const deltaTime = timestamp - this.lastTime;
+                this.lastTime = timestamp;
+
+                this.update(deltaTime);
+                this.render();
+
+                requestAnimationFrame((t) => this.gameLoop(t));
+            }
+
+            start() {
+                requestAnimationFrame((t) => this.gameLoop(t));
+            }
+        }
+
+        // Caiso Character Class
+        class Caiso {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 200;
+                this.height = 180;
+                this.expression = 'idle'; // idle, eating, happy, sad, guilty
+                this.mouthOpen = false;
+                this.bounceOffset = 0;
+                this.bounceSpeed = 0.003;
+                this.eatTimer = 0;
+                this.guiltyTimer = 0;
+                this.blinkTimer = 0;
+                this.isBlinking = false;
+            }
+
+            reset() {
+                this.expression = 'idle';
+                this.mouthOpen = false;
+                this.bounceOffset = 0;
+                this.eatTimer = 0;
+                this.guiltyTimer = 0;
+            }
+
+            eat() {
+                this.expression = 'eating';
+                this.mouthOpen = true;
+                this.eatTimer = 500;
+            }
+
+            showGuilty() {
+                this.expression = 'guilty';
+                this.guiltyTimer = 800;
+            }
+
+            update(deltaTime) {
+                // Bounce animation
+                this.bounceOffset = Math.sin(Date.now() * this.bounceSpeed) * 5;
+
+                // Blink timer
+                this.blinkTimer += deltaTime;
+                if (this.blinkTimer > 3000) {
+                    this.isBlinking = true;
+                    if (this.blinkTimer > 3150) {
+                        this.isBlinking = false;
+                        this.blinkTimer = 0;
+                    }
+                }
+
+                // Eat animation timer
+                if (this.eatTimer > 0) {
+                    this.eatTimer -= deltaTime;
+                    if (this.eatTimer <= 0) {
+                        this.expression = 'idle';
+                        this.mouthOpen = false;
+                    }
+                }
+
+                // Guilty timer
+                if (this.guiltyTimer > 0) {
+                    this.guiltyTimer -= deltaTime;
+                    if (this.guiltyTimer <= 0) {
+                        this.expression = 'idle';
+                    }
+                }
+            }
+
+            draw(ctx) {
+                const x = this.x;
+                const y = this.y + this.bounceOffset;
+
+                // Body shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(x, y + 90, 80, 20, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body
+                const bodyGradient = ctx.createRadialGradient(x, y, 0, x, y, 100);
+                bodyGradient.addColorStop(0, '#a29bfe');
+                bodyGradient.addColorStop(1, '#6c5ce7');
+                ctx.fillStyle = bodyGradient;
+                ctx.beginPath();
+                ctx.ellipse(x, y, 100, 85, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(x - 30, y - 30, 30, 20, -0.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Arms
+                ctx.fillStyle = '#6c5ce7';
+                // Left arm
+                ctx.beginPath();
+                ctx.ellipse(x - 90, y + 20, 25, 15, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                // Right arm
+                ctx.beginPath();
+                ctx.ellipse(x + 90, y + 20, 25, 15, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                this.drawEyes(ctx, x, y);
+
+                // Mouth
+                this.drawMouth(ctx, x, y);
+
+                // Expression extras
+                if (this.expression === 'happy') {
+                    // Blush
+                    ctx.fillStyle = 'rgba(255, 107, 107, 0.4)';
+                    ctx.beginPath();
+                    ctx.ellipse(x - 50, y + 10, 15, 10, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.ellipse(x + 50, y + 10, 15, 10, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.expression === 'guilty') {
+                    // Sweat drop
+                    ctx.fillStyle = '#74b9ff';
+                    ctx.beginPath();
+                    ctx.moveTo(x + 70, y - 40);
+                    ctx.quadraticCurveTo(x + 80, y - 20, x + 70, y - 10);
+                    ctx.quadraticCurveTo(x + 60, y - 20, x + 70, y - 40);
+                    ctx.fill();
+                }
+            }
+
+            drawEyes(ctx, x, y) {
+                const eyeY = y - 20;
+                const leftEyeX = x - 35;
+                const rightEyeX = x + 35;
+
+                if (this.expression === 'sad') {
+                    // Sad eyes
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.ellipse(leftEyeX, eyeY, 22, 25, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.ellipse(rightEyeX, eyeY, 22, 25, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Tears
+                    ctx.fillStyle = '#74b9ff';
+                    ctx.beginPath();
+                    ctx.ellipse(leftEyeX - 10, eyeY + 30, 5, 15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.ellipse(rightEyeX + 10, eyeY + 30, 5, 15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Pupils (looking down)
+                    ctx.fillStyle = '#2d3436';
+                    ctx.beginPath();
+                    ctx.arc(leftEyeX, eyeY + 5, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(rightEyeX, eyeY + 5, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.expression === 'eating' || this.expression === 'happy') {
+                    // Happy closed eyes
+                    ctx.strokeStyle = '#2d3436';
+                    ctx.lineWidth = 4;
+                    ctx.lineCap = 'round';
+
+                    ctx.beginPath();
+                    ctx.arc(leftEyeX, eyeY, 15, 0.2, Math.PI - 0.2);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(rightEyeX, eyeY, 15, 0.2, Math.PI - 0.2);
+                    ctx.stroke();
+                } else if (this.isBlinking) {
+                    // Blinking
+                    ctx.strokeStyle = '#2d3436';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(leftEyeX - 15, eyeY);
+                    ctx.lineTo(leftEyeX + 15, eyeY);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(rightEyeX - 15, eyeY);
+                    ctx.lineTo(rightEyeX + 15, eyeY);
+                    ctx.stroke();
+                } else {
+                    // Normal eyes
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.ellipse(leftEyeX, eyeY, 22, 25, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.ellipse(rightEyeX, eyeY, 22, 25, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Pupils
+                    ctx.fillStyle = '#2d3436';
+                    ctx.beginPath();
+                    ctx.arc(leftEyeX + 3, eyeY + 3, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(rightEyeX + 3, eyeY + 3, 12, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Eye shine
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(leftEyeX - 2, eyeY - 5, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(rightEyeX - 2, eyeY - 5, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            drawMouth(ctx, x, y) {
+                const mouthY = y + 30;
+
+                if (this.mouthOpen || this.expression === 'eating') {
+                    // Open mouth (eating)
+                    ctx.fillStyle = '#2d3436';
+                    ctx.beginPath();
+                    ctx.ellipse(x, mouthY, 50, 35, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Tongue
+                    ctx.fillStyle = '#ff6b6b';
+                    ctx.beginPath();
+                    ctx.ellipse(x, mouthY + 15, 30, 20, 0, 0, Math.PI);
+                    ctx.fill();
+
+                    // Teeth
+                    ctx.fillStyle = '#fff';
+                    for (let i = 0; i < 5; i++) {
+                        const toothX = x - 40 + i * 20;
+                        // Top teeth
+                        ctx.beginPath();
+                        ctx.moveTo(toothX, mouthY - 30);
+                        ctx.lineTo(toothX + 10, mouthY - 30);
+                        ctx.lineTo(toothX + 5, mouthY - 15);
+                        ctx.fill();
+                    }
+                } else if (this.expression === 'happy') {
+                    // Happy smile
+                    ctx.strokeStyle = '#2d3436';
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.arc(x, mouthY - 10, 35, 0.2, Math.PI - 0.2);
+                    ctx.stroke();
+                } else if (this.expression === 'sad') {
+                    // Sad frown
+                    ctx.strokeStyle = '#2d3436';
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.arc(x, mouthY + 20, 25, Math.PI + 0.3, -0.3);
+                    ctx.stroke();
+                } else {
+                    // Normal mouth (slightly open, hungry)
+                    ctx.fillStyle = '#2d3436';
+                    ctx.beginPath();
+                    ctx.ellipse(x, mouthY, 40, 20, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Drool
+                    if (Math.sin(Date.now() * 0.005) > 0.5) {
+                        ctx.fillStyle = '#74b9ff';
+                        ctx.beginPath();
+                        ctx.ellipse(x + 30, mouthY + 25 + Math.sin(Date.now() * 0.01) * 5, 5, 10, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        // Flying Food Class
+        class FlyingFood {
+            constructor(foodData, startX, startY, endX, endY) {
+                this.foodData = foodData;
+                this.startX = startX;
+                this.startY = startY;
+                this.endX = endX;
+                this.endY = endY;
+                this.x = startX;
+                this.y = startY;
+                this.progress = 0;
+                this.duration = 400; // ms
+                this.elapsed = 0;
+                this.rotation = 0;
+                this.arrived = false;
+            }
+
+            update(deltaTime) {
+                this.elapsed += deltaTime;
+                this.progress = Math.min(this.elapsed / this.duration, 1);
+
+                // Parabolic path
+                const t = this.progress;
+                this.x = this.startX + (this.endX - this.startX) * t;
+
+                // Quadratic bezier for arc
+                const controlY = Math.min(this.startY, this.endY) - 100;
+                this.y = (1 - t) * (1 - t) * this.startY +
+                         2 * (1 - t) * t * controlY +
+                         t * t * this.endY;
+
+                this.rotation += 0.2;
+
+                if (this.progress >= 1) {
+                    this.arrived = true;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.font = '40px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.foodData.emoji, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        // Utility function for rounded rectangles
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        // Initialize and start game
+        const canvas = document.getElementById('gameCanvas');
+        const game = new Game(canvas);
+        game.start();
+    </script>
+</body>
+</html>

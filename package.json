@@ -1,0 +1,20 @@
+{
+  "name": "feeding-caiso",
+  "version": "1.0.0",
+  "description": "A fun monster feeding game - Save the villagers by feeding Caiso!",
+  "main": "src/index.html",
+  "scripts": {
+    "start": "npx serve src",
+    "dev": "npx serve src"
+  },
+  "keywords": [
+    "game",
+    "html5",
+    "canvas",
+    "casual",
+    "feeding",
+    "monster"
+  ],
+  "author": "",
+  "license": "MIT"
+}
