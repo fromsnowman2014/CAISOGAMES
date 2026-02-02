@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAISOGAMES - Game Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0e0e10;
+            --bg-secondary: #18181b;
+            --bg-card: #1f1f23;
+            --bg-card-hover: #26262c;
+            --accent-green: #00d26a;
+            --accent-purple: #9147ff;
+            --accent-blue: #1e90ff;
+            --text-primary: #efeff1;
+            --text-secondary: #adadb8;
+            --text-muted: #636369;
+            --border-color: #2f2f35;
+            --glow-green: rgba(0, 210, 106, 0.4);
+            --glow-purple: rgba(145, 71, 255, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background animated gradient */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(145, 71, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 210, 106, 0.1) 0%, transparent 50%),
+                var(--bg-primary);
+            z-index: -1;
+            animation: gradientShift 20s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Header */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(14, 14, 16, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-green));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 20px var(--glow-purple); }
+            50% { box-shadow: 0 0 30px var(--glow-green); }
+        }
+
+        .logo-text {
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-purple);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Featured Game Section */
+        .featured-section {
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--accent-green);
+            border-radius: 2px;
+        }
+
+        .featured-card {
+            position: relative;
+            background: var(--bg-card);
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border-color);
+        }
+
+        .featured-card:hover {
+            transform: scale(1.01);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px var(--glow-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .featured-card a {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .featured-thumbnail {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 21/9;
+            overflow: hidden;
+        }
+
+        .featured-thumbnail img,
+        .featured-thumbnail svg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .featured-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(14, 14, 16, 0.95) 0%, rgba(14, 14, 16, 0.5) 40%, transparent 100%);
+        }
+
+        .featured-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 2rem;
+        }
+
+        .featured-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--accent-green);
+            color: #000;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .featured-badge svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .featured-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .featured-description {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .play-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--accent-green), #00b85c);
+            color: #000;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px var(--glow-green);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px var(--glow-green);
+        }
+
+        .play-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Games Grid */
+        .games-section {
+            animation: fadeInUp 0.6s ease-out 0.4s both;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Game Card */
+        .game-card {
+            position: relative;
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border-color);
+            animation: fadeInUp 0.5s ease-out both;
+        }
+
+        .game-card:nth-child(1) { animation-delay: 0.1s; }
+        .game-card:nth-child(2) { animation-delay: 0.15s; }
+        .game-card:nth-child(3) { animation-delay: 0.2s; }
+        .game-card:nth-child(4) { animation-delay: 0.25s; }
+        .game-card:nth-child(5) { animation-delay: 0.3s; }
+        .game-card:nth-child(6) { animation-delay: 0.35s; }
+
+        .game-card.active:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: var(--accent-purple);
+        }
+
+        .game-card a {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .card-thumbnail {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            background: var(--bg-secondary);
+        }
+
+        .card-thumbnail img,
+        .card-thumbnail svg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s;
+        }
+
+        .game-card.active:hover .card-thumbnail img,
+        .game-card.active:hover .card-thumbnail svg {
+            transform: scale(1.1);
+        }
+
+        .card-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .game-card.active:hover .card-overlay {
+            opacity: 1;
+        }
+
+        .card-play-btn {
+            background: var(--accent-green);
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transform: scale(0.8);
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .game-card.active:hover .card-play-btn {
+            transform: scale(1);
+        }
+
+        .card-play-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .card-info {
+            padding: 1rem 1.25rem 1.25rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .card-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Coming Soon Card */
+        .game-card.coming-soon {
+            cursor: default;
+        }
+
+        .game-card.coming-soon .card-thumbnail {
+            position: relative;
+        }
+
+        .game-card.coming-soon .card-thumbnail::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg,
+                rgba(145, 71, 255, 0.1) 0%,
+                rgba(0, 210, 106, 0.1) 100%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .coming-soon-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: var(--accent-purple);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid var(--accent-purple);
+        }
+
+        .game-card.coming-soon .card-info {
+            opacity: 0.6;
+        }
+
+        /* Empty Card */
+        .game-card.empty {
+            border-style: dashed;
+            cursor: default;
+        }
+
+        .game-card.empty .card-thumbnail {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+        }
+
+        .empty-icon {
+            width: 60px;
+            height: 60px;
+            border: 2px dashed var(--border-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 28px;
+            font-weight: 300;
+        }
+
+        .game-card.empty .card-info {
+            opacity: 0.4;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 4rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .logo-text {
+                font-size: 1.2rem;
+            }
+
+            .header-btn span {
+                display: none;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .featured-title {
+                font-size: 1.8rem;
+            }
+
+            .featured-description {
+                font-size: 1rem;
+            }
+
+            .featured-content {
+                padding: 1.5rem;
+            }
+
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-card);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--bg-card-hover);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-icon">🎮</div>
+            <span class="logo-text">CAISOGAMES</span>
+        </a>
+        <div class="header-actions">
+            <button class="header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                </svg>
+                <span>About</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Featured Game -->
+        <section class="featured-section">
+            <h2 class="section-title">Featured Game</h2>
+            <article class="featured-card">
+                <a href="games/feeding-caiso/">
+                    <div class="featured-thumbnail">
+                        <!-- Inline SVG Thumbnail for Feeding Caiso -->
+                        <svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Sky background -->
+                            <defs>
+                                <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#87CEEB"/>
+                                    <stop offset="60%" style="stop-color:#E0F7FA"/>
+                                    <stop offset="100%" style="stop-color:#81C784"/>
+                                </linearGradient>
+                                <radialGradient id="caisoBody" cx="50%" cy="40%" r="50%">
+                                    <stop offset="0%" style="stop-color:#9b59b6"/>
+                                    <stop offset="100%" style="stop-color:#6c3483"/>
+                                </radialGradient>
+                            </defs>
+                            <rect width="800" height="350" fill="url(#sky)"/>
+                            <!-- Sun -->
+                            <circle cx="100" cy="60" r="35" fill="#FFF59D"/>
+                            <circle cx="100" cy="60" r="25" fill="#FFEB3B"/>
+                            <!-- Clouds -->
+                            <ellipse cx="250" cy="50" rx="40" ry="20" fill="rgba(255,255,255,0.9)"/>
+                            <ellipse cx="280" cy="45" rx="30" ry="18" fill="rgba(255,255,255,0.9)"/>
+                            <ellipse cx="550" cy="70" rx="45" ry="22" fill="rgba(255,255,255,0.9)"/>
+                            <ellipse cx="590" cy="65" rx="35" ry="20" fill="rgba(255,255,255,0.9)"/>
+                            <!-- Ground -->
+                            <rect x="0" y="280" width="800" height="70" fill="#81C784"/>
+                            <!-- Path -->
+                            <path d="M0 290 Q400 310 800 280 L800 350 L0 350 Z" fill="#A1887F"/>
+                            <!-- Caiso Monster -->
+                            <g transform="translate(580, 180) scale(-1, 1)">
+                                <ellipse cx="0" cy="60" rx="70" ry="15" fill="rgba(0,0,0,0.2)"/>
+                                <ellipse cx="0" cy="0" rx="65" ry="70" fill="url(#caisoBody)"/>
+                                <ellipse cx="0" cy="15" rx="40" ry="45" fill="#bb8fce"/>
+                                <!-- Mouth -->
+                                <ellipse cx="0" cy="25" rx="40" ry="30" fill="#1a1a1a"/>
+                                <ellipse cx="0" cy="35" rx="25" ry="15" fill="#e74c3c"/>
+                                <!-- Teeth -->
+                                <path d="M-35 5 L-25 25 L-15 5 L-5 25 L5 5 L15 25 L25 5 L35 25" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
+                                <!-- Eyes -->
+                                <ellipse cx="-25" cy="-30" rx="18" ry="20" fill="white"/>
+                                <ellipse cx="25" cy="-30" rx="18" ry="20" fill="white"/>
+                                <circle cx="-28" cy="-25" r="10" fill="#2c3e50"/>
+                                <circle cx="22" cy="-25" r="10" fill="#2c3e50"/>
+                                <circle cx="-32" cy="-30" r="4" fill="white"/>
+                                <circle cx="18" cy="-30" r="4" fill="white"/>
+                                <!-- Horns -->
+                                <path d="M-40 -55 Q-50 -80 -35 -85 Q-32 -65 -35 -50" fill="#8e44ad"/>
+                                <path d="M40 -55 Q50 -80 35 -85 Q32 -65 35 -50" fill="#8e44ad"/>
+                            </g>
+                            <!-- Villagers -->
+                            <g transform="translate(180, 260)">
+                                <rect x="0" y="15" width="12" height="18" rx="2" fill="#3498db"/>
+                                <circle cx="6" cy="8" r="8" fill="#ffeaa7"/>
+                                <ellipse cx="6" cy="2" rx="7" ry="5" fill="#6d4c41"/>
+                            </g>
+                            <g transform="translate(240, 265)">
+                                <rect x="0" y="15" width="10" height="15" rx="2" fill="#e74c3c"/>
+                                <circle cx="5" cy="8" r="7" fill="#ffeaa7"/>
+                                <ellipse cx="5" cy="2" rx="6" ry="4" fill="#5d4037"/>
+                            </g>
+                            <g transform="translate(300, 255)">
+                                <rect x="0" y="15" width="14" height="20" rx="2" fill="#27ae60"/>
+                                <circle cx="7" cy="8" r="9" fill="#ffeaa7"/>
+                                <ellipse cx="7" cy="2" rx="8" ry="5" fill="#8d6e63"/>
+                            </g>
+                            <!-- Player -->
+                            <g transform="translate(100, 240)">
+                                <rect x="10" y="35" width="10" height="25" rx="3" fill="#2c3e50"/>
+                                <rect x="30" y="35" width="10" height="25" rx="3" fill="#2c3e50"/>
+                                <rect x="8" y="15" width="35" height="25" rx="4" fill="#e74c3c"/>
+                                <circle cx="25" cy="8" r="14" fill="#ffeaa7"/>
+                                <ellipse cx="25" cy="0" rx="12" ry="10" fill="#5d4037"/>
+                                <ellipse cx="25" cy="50" rx="22" ry="10" fill="#8d6e63"/>
+                                <circle cx="18" cy="46" r="5" fill="#e74c3c"/>
+                                <circle cx="30" cy="44" r="4" fill="#f39c12"/>
+                            </g>
+                            <!-- Flying food -->
+                            <g transform="translate(350, 150)">
+                                <circle cx="0" cy="0" r="15" fill="#e74c3c"/>
+                                <ellipse cx="-5" cy="-5" rx="4" ry="3" fill="#ff6b6b" opacity="0.6"/>
+                                <rect x="-2" y="-12" width="3" height="5" rx="1" fill="#8b4513"/>
+                            </g>
+                        </svg>
+                        <div class="featured-overlay"></div>
+                    </div>
+                    <div class="featured-content">
+                        <span class="featured-badge">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            Featured
+                        </span>
+                        <h3 class="featured-title">Feeding Caiso</h3>
+                        <p class="featured-description">
+                            Save the villagers from the hungry monster Caiso! Throw food to satisfy its hunger before it eats everyone.
+                            Level up, unlock new foods, and build combos in this exciting time-management game.
+                        </p>
+                        <span class="play-btn">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            Play Now
+                        </span>
+                    </div>
+                </a>
+            </article>
+        </section>
+
+        <!-- All Games -->
+        <section class="games-section">
+            <h2 class="section-title">All Games</h2>
+            <div class="games-grid">
+                <!-- Feeding Caiso -->
+                <article class="game-card active">
+                    <a href="games/feeding-caiso/">
+                        <div class="card-thumbnail">
+                            <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="skySmall" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#87CEEB"/>
+                                        <stop offset="100%" style="stop-color:#81C784"/>
+                                    </linearGradient>
+                                    <radialGradient id="caisoSmall" cx="50%" cy="40%" r="50%">
+                                        <stop offset="0%" style="stop-color:#9b59b6"/>
+                                        <stop offset="100%" style="stop-color:#6c3483"/>
+                                    </radialGradient>
+                                </defs>
+                                <rect width="320" height="180" fill="url(#skySmall)"/>
+                                <rect x="0" y="140" width="320" height="40" fill="#81C784"/>
+                                <g transform="translate(230, 90) scale(-0.5, 0.5)">
+                                    <ellipse cx="0" cy="0" rx="65" ry="70" fill="url(#caisoSmall)"/>
+                                    <ellipse cx="0" cy="25" rx="40" ry="30" fill="#1a1a1a"/>
+                                    <path d="M-35 5 L-25 25 L-15 5 L-5 25 L5 5 L15 25 L25 5 L35 25" stroke="white" stroke-width="6" fill="none"/>
+                                    <ellipse cx="-25" cy="-30" rx="18" ry="20" fill="white"/>
+                                    <ellipse cx="25" cy="-30" rx="18" ry="20" fill="white"/>
+                                    <circle cx="-28" cy="-25" r="10" fill="#2c3e50"/>
+                                    <circle cx="22" cy="-25" r="10" fill="#2c3e50"/>
+                                </g>
+                                <g transform="translate(80, 120)">
+                                    <rect x="5" y="20" width="20" height="15" rx="3" fill="#e74c3c"/>
+                                    <circle cx="15" cy="12" r="10" fill="#ffeaa7"/>
+                                </g>
+                                <circle cx="150" cy="80" r="12" fill="#e74c3c"/>
+                            </svg>
+                            <div class="card-overlay">
+                                <span class="card-play-btn">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                    Play
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-info">
+                            <h3 class="card-title">Feeding Caiso</h3>
+                            <p class="card-description">Feed the hungry monster to save the villagers!</p>
+                        </div>
+                    </a>
+                </article>
+
+                <!-- Coming Soon 1 -->
+                <article class="game-card coming-soon">
+                    <div class="card-thumbnail">
+                        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="320" height="180" fill="#1f1f23"/>
+                            <circle cx="160" cy="90" r="40" fill="none" stroke="#9147ff" stroke-width="2" opacity="0.3"/>
+                            <circle cx="160" cy="90" r="25" fill="none" stroke="#9147ff" stroke-width="2" opacity="0.5"/>
+                            <text x="160" y="95" text-anchor="middle" fill="#9147ff" font-size="24">?</text>
+                        </svg>
+                        <span class="coming-soon-badge">Coming Soon</span>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Mystery Game</h3>
+                        <p class="card-description">A new adventure awaits...</p>
+                    </div>
+                </article>
+
+                <!-- Coming Soon 2 -->
+                <article class="game-card coming-soon">
+                    <div class="card-thumbnail">
+                        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="320" height="180" fill="#1f1f23"/>
+                            <circle cx="160" cy="90" r="40" fill="none" stroke="#00d26a" stroke-width="2" opacity="0.3"/>
+                            <circle cx="160" cy="90" r="25" fill="none" stroke="#00d26a" stroke-width="2" opacity="0.5"/>
+                            <text x="160" y="95" text-anchor="middle" fill="#00d26a" font-size="24">?</text>
+                        </svg>
+                        <span class="coming-soon-badge">Coming Soon</span>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Puzzle Quest</h3>
+                        <p class="card-description">Challenge your mind...</p>
+                    </div>
+                </article>
+
+                <!-- Empty Slot 1 -->
+                <article class="game-card empty">
+                    <div class="card-thumbnail">
+                        <div class="empty-icon">+</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Empty Slot</h3>
+                        <p class="card-description">More games coming!</p>
+                    </div>
+                </article>
+
+                <!-- Empty Slot 2 -->
+                <article class="game-card empty">
+                    <div class="card-thumbnail">
+                        <div class="empty-icon">+</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Empty Slot</h3>
+                        <p class="card-description">More games coming!</p>
+                    </div>
+                </article>
+
+                <!-- Empty Slot 3 -->
+                <article class="game-card empty">
+                    <div class="card-thumbnail">
+                        <div class="empty-icon">+</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Empty Slot</h3>
+                        <p class="card-description">More games coming!</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 CAISOGAMES. All rights reserved. Built with creativity and fun!</p>
+    </footer>
+
+    <script>
+        // Add subtle parallax effect to background
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            document.querySelector('.bg-gradient').style.backgroundPosition =
+                `${20 + x * 10}% ${20 + y * 10}%, ${80 - x * 10}% ${80 - y * 10}%`;
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const focused = document.activeElement;
+                if (focused.closest('.game-card.active')) {
+                    focused.closest('.game-card.active').querySelector('a').click();
+                }
+            }
+        });
+
+        // Make active cards focusable
+        document.querySelectorAll('.game-card.active').forEach(card => {
+            card.setAttribute('tabindex', '0');
+        });
+    </script>
+</body>
+</html>
