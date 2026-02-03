@@ -1,12 +1,14 @@
 """Main entry point for image generator module."""
 
+import os
 import asyncio
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from .config import Config, load_config
 from .generators.base import GeneratedImage, GeneratorError
-from .generators.gemini_generator import GeminiGenerator
+from .generators.gemini_rest_generator import GeminiRestGenerator
+from .generators.mock_generator import MockGenerator
 from .processors.image_processor import ImageProcessor
 from .processors.format_converter import FormatConverter
 from .processors.sprite_processor import SpriteProcessor
@@ -20,17 +22,33 @@ class ImageGeneratorService:
 
     Provides a high-level API for generating and processing game assets.
     Supports caching, multiple output formats, and sprite processing.
+
+    Set USE_MOCK_GENERATOR=true environment variable for local testing
+    without API access.
     """
 
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(self, config: Optional[Config] = None, use_mock: Optional[bool] = None):
         """
         Initialize the image generator service.
 
         Args:
             config: Configuration object (loads from env if not provided)
+            use_mock: Force mock mode (auto-detects from env if None)
         """
         self.config = config or load_config()
-        self.generator = GeminiGenerator(self.config)
+
+        # Determine if we should use mock generator
+        if use_mock is None:
+            use_mock = os.getenv('USE_MOCK_GENERATOR', '').lower() in ('true', '1', 'yes')
+
+        # Use mock generator for testing, or real generator for production
+        if use_mock or not self.config.gemini_api_key:
+            self.generator = MockGenerator()
+            self._is_mock = True
+        else:
+            self.generator = GeminiRestGenerator(self.config.gemini_api_key)
+            self._is_mock = False
+
         self.cache = ImageCache(
             self.config.cache_dir,
             max_size_mb=self.config.cache_max_size_mb
@@ -38,6 +56,11 @@ class ImageGeneratorService:
         self.logger = GenerationLogger()
 
         setup_logging()
+
+    @property
+    def is_mock(self) -> bool:
+        """Returns True if using mock generator."""
+        return self._is_mock
 
     async def generate(
         self,
@@ -76,7 +99,7 @@ class ImageGeneratorService:
             if cached:
                 self.logger.cache_hit(cache_key)
                 return GeneratedImage(
-                    data=cached,
+                    image_data=cached,
                     prompt=prompt,
                     width=width,
                     height=height,
@@ -110,7 +133,7 @@ class ImageGeneratorService:
             if use_cache:
                 self.cache.put(
                     key=cache_key,
-                    data=image.data,
+                    data=image.image_data,
                     prompt=prompt,
                     generator='gemini',
                     width=width,
@@ -162,7 +185,7 @@ class ImageGeneratorService:
 
         from PIL import Image as PILImage
         import io
-        pil_image = PILImage.open(io.BytesIO(image.data))
+        pil_image = PILImage.open(io.BytesIO(image.image_data))
 
         return processor.process_sprite(
             pil_image,
@@ -204,7 +227,7 @@ class ImageGeneratorService:
 
         output_path = Path(output_dir) / f"{name}.png"
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(image.data)
+        output_path.write_bytes(image.image_data)
 
         return output_path
 
@@ -243,7 +266,7 @@ class ImageGeneratorService:
 
             from PIL import Image as PILImage
             import io
-            pil_image = PILImage.open(io.BytesIO(image.data))
+            pil_image = PILImage.open(io.BytesIO(image.image_data))
 
             # Process frame
             processed = ImageProcessor.remove_background(pil_image)
@@ -286,9 +309,9 @@ async def generate_image(
     image = await service.generate(prompt, **kwargs)
 
     if output_path:
-        Path(output_path).write_bytes(image.data)
+        Path(output_path).write_bytes(image.image_data)
 
-    return image.data
+    return image.image_data
 
 
 # Make CLI available when run as module

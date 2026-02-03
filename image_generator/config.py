@@ -73,6 +73,11 @@ class Config:
 config = Config()
 
 
+def load_config() -> Config:
+    """Load and return a new Config instance."""
+    return Config()
+
+
 # Prompt templates for different asset types
 PROMPT_TEMPLATES = {
     "sprite": (
