@@ -9,6 +9,7 @@ from .config import Config, load_config
 from .generators.base import GeneratedImage, GeneratorError
 from .generators.gemini_rest_generator import GeminiRestGenerator
 from .generators.mock_generator import MockGenerator
+from .generators.vercel_proxy_generator import VercelProxyGenerator
 from .processors.image_processor import ImageProcessor
 from .processors.format_converter import FormatConverter
 from .processors.sprite_processor import SpriteProcessor
@@ -23,31 +24,53 @@ class ImageGeneratorService:
     Provides a high-level API for generating and processing game assets.
     Supports caching, multiple output formats, and sprite processing.
 
-    Set USE_MOCK_GENERATOR=true environment variable for local testing
-    without API access.
+    Generator selection (in order of priority):
+    1. USE_MOCK_GENERATOR=true -> MockGenerator (for testing)
+    2. VERCEL_APP_URL set -> VercelProxyGenerator (for Claude Code development)
+    3. GEMINI_API_KEY set -> GeminiRestGenerator (direct API access)
+    4. None of above -> MockGenerator (fallback)
     """
 
-    def __init__(self, config: Optional[Config] = None, use_mock: Optional[bool] = None):
+    def __init__(
+        self,
+        config: Optional[Config] = None,
+        use_mock: Optional[bool] = None,
+        use_proxy: Optional[bool] = None
+    ):
         """
         Initialize the image generator service.
 
         Args:
             config: Configuration object (loads from env if not provided)
             use_mock: Force mock mode (auto-detects from env if None)
+            use_proxy: Force Vercel proxy mode (auto-detects from env if None)
         """
         self.config = config or load_config()
 
-        # Determine if we should use mock generator
+        # Determine generator mode
         if use_mock is None:
             use_mock = os.getenv('USE_MOCK_GENERATOR', '').lower() in ('true', '1', 'yes')
 
-        # Use mock generator for testing, or real generator for production
-        if use_mock or not self.config.gemini_api_key:
+        if use_proxy is None:
+            use_proxy = bool(os.getenv('VERCEL_APP_URL', ''))
+
+        # Select generator based on configuration
+        self._generator_type = 'unknown'
+
+        if use_mock:
             self.generator = MockGenerator()
-            self._is_mock = True
-        else:
+            self._generator_type = 'mock'
+        elif use_proxy:
+            vercel_url = os.getenv('VERCEL_APP_URL', '')
+            self.generator = VercelProxyGenerator(vercel_url=vercel_url)
+            self._generator_type = 'vercel-proxy'
+        elif self.config.gemini_api_key:
             self.generator = GeminiRestGenerator(self.config.gemini_api_key)
-            self._is_mock = False
+            self._generator_type = 'gemini-rest'
+        else:
+            # Fallback to mock
+            self.generator = MockGenerator()
+            self._generator_type = 'mock'
 
         self.cache = ImageCache(
             self.config.cache_dir,
@@ -60,7 +83,12 @@ class ImageGeneratorService:
     @property
     def is_mock(self) -> bool:
         """Returns True if using mock generator."""
-        return self._is_mock
+        return self._generator_type == 'mock'
+
+    @property
+    def generator_type(self) -> str:
+        """Returns the type of generator being used."""
+        return self._generator_type
 
     async def generate(
         self,

@@ -8,20 +8,65 @@ CAISOGAMES is a multi-game platform featuring casual games for children. The pla
 # Game Development Rules (Super Mario Style)
 
 ## Graphics Pipeline
-- Use the `generate_image_script.py` to create assets.
-- All assets must be saved in `./assets/sprites/` or `./assets/backgrounds/`.
-- File format: PNG (prefer pixel art style).
-- Naming convention: {entity}_{state}_{frame}.png (e.g., mario_walk_01.png).
+
+### AI Image Generation (via Vercel Proxy)
+
+Since Claude Code environment cannot directly access Google APIs, we use a Vercel proxy:
+
+```
+[Claude Code] --> [Vercel API: /api/generate-image] --> [Gemini API]
+                         (GEMINI_API_KEY stored here)
+```
+
+**Setup for Development:**
+```bash
+# Set the Vercel app URL for image generation
+export VERCEL_APP_URL=https://caisogames.vercel.app
+
+# Or use mock generator for testing without API
+export USE_MOCK_GENERATOR=true
+```
+
+**Generate Assets:**
+```bash
+# Generate a sprite
+python scripts/generate_asset.py sprite "cute pixel art monster" monster_idle
+
+# Generate a background
+python scripts/generate_asset.py background "fantasy forest" forest_day
+
+# With custom size
+python scripts/generate_asset.py sprite "dragon character" dragon --size 128x128
+```
+
+**Python API:**
+```python
+from image_generator import ImageGeneratorService
+import asyncio
+
+async def generate():
+    service = ImageGeneratorService()  # Auto-detects VERCEL_APP_URL
+    image = await service.generate("pixel art slime monster")
+    image.save("assets/sprites/slime.png")
+
+asyncio.run(generate())
+```
+
+### Asset Requirements
+- All assets saved in `./assets/sprites/` or `./assets/backgrounds/`
+- File format: PNG (transparent background for sprites)
+- Naming convention: `{entity}_{state}_{frame}.png` (e.g., `mario_walk_01.png`)
 
 ## Iterative Refinement Process
 1. **Drafting:** Generate a base sprite using a prompt (e.g., "16-bit pixel art of a plumber jumping, side view").
-2. **Review:** Main agent calls a 'visual-critic' subagent to check if the style matches existing assets.
+2. **Review:** Check if the style matches existing assets.
 3. **Editing:** If the style doesn't match, re-run generation with specific feedback (e.g., "increase contrast", "reduce palette to 8 colors").
-4. **Integration:** Automatically update the `assets.json` or CSS/JS code to reference the new file path.
+4. **Integration:** Save to assets folder and reference in game code.
 
 ## Tools
-- `python scripts/process_image.py`: Used for background removal or resizing.
-- `python scripts/gen_gif.py`: Used to combine frames into an animated GIF.
+- `python scripts/generate_asset.py`: AI image generation (sprites, backgrounds)
+- `python scripts/process_image.py`: Image processing (resize, bg removal)
+- `python scripts/gen_gif.py`: Combine frames into animated GIF
 
 ---
 
@@ -30,11 +75,17 @@ CAISOGAMES is a multi-game platform featuring casual games for children. The pla
 CAISOGAMES/
 ├── index.html                    # Main landing page (Xbox-style hub)
 ├── CLAUDE.md                     # This file - development guidelines
+├── api/
+│   └── generate-image.py         # Vercel serverless function (image proxy)
 ├── assets/
 │   ├── sprites/                  # Character and object sprites
 │   └── backgrounds/              # Background images
+├── image_generator/              # Python package for AI image generation
+│   ├── generators/               # Generator backends (Gemini, Mock, Vercel)
+│   ├── processors/               # Image processing utilities
+│   └── utils/                    # Caching, logging, retry logic
 ├── scripts/
-│   ├── generate_image_script.py  # Image generation script
+│   ├── generate_asset.py         # CLI for generating game assets
 │   ├── process_image.py          # Image processing (resize, bg removal)
 │   └── gen_gif.py                # GIF animation generator
 ├── games/
