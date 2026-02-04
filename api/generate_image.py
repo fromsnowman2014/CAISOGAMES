@@ -71,18 +71,17 @@ async def generate_image(prompt: str, width: int = 512, height: int = 512, style
     style_prompt = get_style_prompt(style)
     full_prompt = f"{prompt}. {style_prompt}"
 
-    url = f"{BASE_URL}/models/{IMAGEN_MODEL}:predict"
+    # Use the generateImages endpoint for Imagen models
+    url = f"{BASE_URL}/models/{IMAGEN_MODEL}:generateImages"
     aspect_ratio = get_aspect_ratio(width, height)
 
     payload = {
-        "instances": [{
-            "prompt": full_prompt
-        }],
-        "parameters": {
-            "sampleCount": 1,
+        "prompt": full_prompt,
+        "config": {
+            "numberOfImages": 1,
             "aspectRatio": aspect_ratio,
-            "personGeneration": "allow_adult",
-            "safetySetting": "block_only_high"
+            "personGeneration": "ALLOW_ADULT",
+            "outputMimeType": "image/png"
         }
     }
 
@@ -98,11 +97,29 @@ async def generate_image(prompt: str, width: int = 512, height: int = 512, style
             error_msg = error_data.get('error', {}).get('message', 'Bad request')
             raise Exception(f"Bad request: {error_msg}")
         elif response.status_code != 200:
-            raise Exception(f"API error: {response.status_code}")
+            # Return more detailed error info
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', f'Status {response.status_code}')
+            except:
+                error_msg = f"Status {response.status_code}"
+            raise Exception(f"API error: {error_msg}")
 
         data = response.json()
+        
+        # Handle the generateImages response format
+        generated_images = data.get('generatedImages', [])
+        for img in generated_images:
+            if 'image' in img and 'imageBytes' in img['image']:
+                return {
+                    'image': img['image']['imageBytes'],
+                    'format': 'png',
+                    'width': width,
+                    'height': height
+                }
+        
+        # Fallback: check for older prediction format
         predictions = data.get('predictions', [])
-
         for pred in predictions:
             if 'bytesBase64Encoded' in pred:
                 return {
