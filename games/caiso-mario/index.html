@@ -315,7 +315,10 @@
         get jump() { return this.isDown('Space') || this.isDown('KeyW') || this.isDown('ArrowUp'); },
         get jumpPressed() { return this.wasPressed('Space') || this.wasPressed('KeyW') || this.wasPressed('ArrowUp'); },
         get attack() { return this.wasPressed('KeyZ') || this.wasPressed('KeyJ'); },
-        get sprint() { return this.isDown('ShiftLeft') || this.isDown('ShiftRight'); }
+        get throw() { return this.wasPressed('KeyX') || this.wasPressed('KeyK'); },
+        get dash() { return this.wasPressed('ShiftLeft') || this.wasPressed('ShiftRight'); },
+        get sprint() { return this.isDown('ShiftLeft') || this.isDown('ShiftRight'); },
+        get down() { return this.isDown('ArrowDown') || this.isDown('KeyS'); }
     };
 
     // ============================================
@@ -861,6 +864,24 @@
             this.state = 'idle';
             this.coins = 0;
             this.score = 0;
+
+            // New features
+            this.throwing = false;
+            this.throwCooldown = 0;
+            this.dashing = false;
+            this.dashTimer = 0;
+            this.dashCooldown = 0;
+            this.dashDirection = 1;
+
+            // Combo system
+            this.combo = 0;
+            this.comboTimer = 0;
+            this.maxCombo = 0;
+
+            // Weapon upgrade (0=pawn, 1=knight, 2=bishop, 3=rook)
+            this.weaponLevel = 0;
+            this.canDoubleJump = false;
+            this.hasDoubleJumped = false;
         }
 
         update(level) {
@@ -890,15 +911,24 @@
             // Coyote time & jump
             if (this.grounded) {
                 this.coyoteTime = PHYSICS.COYOTE_TIME;
+                this.hasDoubleJumped = false; // Reset double jump
             } else {
                 this.coyoteTime--;
             }
 
+            // Normal jump
             if (this.jumpBuffer > 0 && this.coyoteTime > 0) {
                 this.velocityY = PHYSICS.JUMP_FORCE;
                 this.grounded = false;
                 this.coyoteTime = 0;
                 this.jumpBuffer = 0;
+            }
+            // Double jump (Knight weapon ability)
+            else if (this.jumpBuffer > 0 && this.canDoubleJump && !this.hasDoubleJumped && !this.grounded) {
+                this.velocityY = PHYSICS.JUMP_FORCE * 0.85;
+                this.hasDoubleJumped = true;
+                this.jumpBuffer = 0;
+                game.spawnParticles(this.centerX, this.bottom, 'doubleJump', 6);
             }
             this.jumpBuffer--;
 
@@ -940,6 +970,47 @@
                 }
             }
 
+            // Book throw (X/K key)
+            this.throwCooldown = Math.max(0, this.throwCooldown - 1);
+            if (Input.throw && this.throwCooldown <= 0 && !this.throwing) {
+                this.throwing = true;
+                this.throwCooldown = 45; // 0.75 seconds
+                // Create book projectile
+                const bookVX = this.facing * 8;
+                const bookVY = -3; // Slight arc
+                game.createProjectile(this.centerX, this.centerY, bookVX, bookVY, 'player');
+                game.spawnParticles(this.centerX, this.centerY, 'throw', 4);
+                setTimeout(() => this.throwing = false, 200);
+            }
+
+            // Dash ability (Shift when direction pressed)
+            this.dashCooldown = Math.max(0, this.dashCooldown - 1);
+            if (this.dashing) {
+                this.dashTimer--;
+                this.velocityX = this.dashDirection * 15;
+                this.velocityY = 0;
+                if (this.dashTimer <= 0) {
+                    this.dashing = false;
+                    this.velocityX = this.dashDirection * PHYSICS.MAX_SPEED;
+                }
+            } else if (Input.dash && this.dashCooldown <= 0 && (Input.left || Input.right)) {
+                this.dashing = true;
+                this.dashTimer = 8;
+                this.dashCooldown = 60; // 1 second cooldown
+                this.dashDirection = Input.right ? 1 : -1;
+                this.invincible = true;
+                this.invincibleTimer = Math.max(this.invincibleTimer, 10);
+                game.spawnParticles(this.centerX, this.centerY, 'dash', 8);
+            }
+
+            // Combo timer decay
+            if (this.comboTimer > 0) {
+                this.comboTimer--;
+                if (this.comboTimer <= 0) {
+                    this.combo = 0;
+                }
+            }
+
             // Invincibility frames
             if (this.invincible) {
                 this.invincibleTimer--;
@@ -949,8 +1020,12 @@
             }
 
             // Animation state
-            if (this.attacking) {
+            if (this.dashing) {
+                this.state = 'dash';
+            } else if (this.attacking) {
                 this.state = 'attack';
+            } else if (this.throwing) {
+                this.state = 'throw';
             } else if (!this.grounded) {
                 this.state = this.velocityY < 0 ? 'jump' : 'fall';
             } else if (Math.abs(this.velocityX) > 0.5) {
@@ -994,6 +1069,48 @@
             this.y = spawn.y;
             this.velocityX = 0;
             this.velocityY = 0;
+        }
+
+        addCombo() {
+            this.combo++;
+            this.comboTimer = 120; // 2 seconds to continue combo
+            if (this.combo > this.maxCombo) {
+                this.maxCombo = this.combo;
+            }
+        }
+
+        getComboMultiplier() {
+            if (this.combo < 3) return 1;
+            if (this.combo < 5) return 1.5;
+            if (this.combo < 10) return 2;
+            if (this.combo < 15) return 3;
+            return 4;
+        }
+
+        upgradeWeapon() {
+            if (this.weaponLevel < 3) {
+                this.weaponLevel++;
+                game.spawnParticles(this.centerX, this.centerY, 'upgrade', 16);
+
+                // Apply weapon abilities
+                switch (this.weaponLevel) {
+                    case 1: // Knight - Double jump
+                        this.canDoubleJump = true;
+                        break;
+                    case 2: // Bishop - Stronger throws
+                        // Throws deal more damage (handled in projectile creation)
+                        break;
+                    case 3: // Rook - Extra HP
+                        this.maxHp = 5;
+                        this.hp = Math.min(this.hp + 2, this.maxHp);
+                        break;
+                }
+            }
+        }
+
+        getWeaponName() {
+            const names = ['Wooden Pawn', 'Stone Knight', 'Crystal Bishop', 'Marble Rook'];
+            return names[this.weaponLevel];
         }
 
         render(ctx, camera) {
@@ -1314,6 +1431,384 @@
     }
 
     // ============================================
+    // BOSS: CAISO
+    // ============================================
+    class Boss extends Entity {
+        constructor(x, y) {
+            super(x, y, 128, 128);
+            this.hp = 15;
+            this.maxHp = 15;
+            this.phase = 1; // 1, 2, 3
+            this.state = 'idle';
+            this.stateTimer = 0;
+            this.attackCooldown = 0;
+            this.dead = false;
+            this.deathTimer = 0;
+            this.invincible = false;
+            this.invincibleTimer = 0;
+            this.animFrame = 0;
+            this.animTimer = 0;
+
+            // Attack patterns
+            this.currentAttack = null;
+            this.attackQueue = [];
+        }
+
+        update(player, level) {
+            if (this.dead) {
+                this.deathTimer++;
+                return this.deathTimer > 180; // 3 seconds death animation
+            }
+
+            // Update phase based on HP
+            if (this.hp <= 5) this.phase = 3;
+            else if (this.hp <= 10) this.phase = 2;
+
+            // Invincibility
+            if (this.invincible) {
+                this.invincibleTimer--;
+                if (this.invincibleTimer <= 0) {
+                    this.invincible = false;
+                }
+            }
+
+            this.attackCooldown = Math.max(0, this.attackCooldown - 1);
+            this.stateTimer++;
+
+            // Face player
+            this.facing = player.centerX < this.centerX ? -1 : 1;
+
+            // State machine
+            switch (this.state) {
+                case 'idle':
+                    if (this.stateTimer > 60 && this.attackCooldown <= 0) {
+                        this.chooseAttack();
+                    }
+                    break;
+
+                case 'roar':
+                    if (this.stateTimer > 40) {
+                        this.state = 'attack';
+                        this.stateTimer = 0;
+                    }
+                    break;
+
+                case 'attack':
+                    this.executeAttack(player);
+                    break;
+
+                case 'cooldown':
+                    if (this.stateTimer > 60) {
+                        this.state = 'idle';
+                        this.stateTimer = 0;
+                        this.attackCooldown = 30;
+                    }
+                    break;
+            }
+
+            // Animation
+            this.animTimer++;
+            if (this.animTimer >= 8) {
+                this.animTimer = 0;
+                this.animFrame++;
+            }
+
+            return false;
+        }
+
+        chooseAttack() {
+            const attacks = ['summon', 'charge', 'projectile'];
+            if (this.phase >= 2) attacks.push('slam');
+            if (this.phase >= 3) attacks.push('barrage');
+
+            this.currentAttack = attacks[Math.floor(Math.random() * attacks.length)];
+            this.state = 'roar';
+            this.stateTimer = 0;
+        }
+
+        executeAttack(player) {
+            switch (this.currentAttack) {
+                case 'summon':
+                    if (this.stateTimer === 1) {
+                        // Spawn minion pawns
+                        const count = this.phase;
+                        for (let i = 0; i < count; i++) {
+                            const spawnX = this.x + (i - count/2) * 100;
+                            game.level.enemies.push(new Enemy(spawnX, this.y + 50, 'pawn'));
+                        }
+                        game.spawnParticles(this.centerX, this.centerY, 'upgrade', 12);
+                    }
+                    if (this.stateTimer > 30) {
+                        this.state = 'cooldown';
+                        this.stateTimer = 0;
+                    }
+                    break;
+
+                case 'charge':
+                    if (this.stateTimer === 1) {
+                        this.velocityX = this.facing * 8;
+                    }
+                    this.velocityY += 0.5;
+                    this.velocityY = Math.min(this.velocityY, 10);
+                    this.x += this.velocityX;
+                    this.y += this.velocityY;
+
+                    if (this.stateTimer > 60 || this.x < 50 || this.x > game.level.width * TILE_SIZE - 150) {
+                        this.velocityX = 0;
+                        this.state = 'cooldown';
+                        this.stateTimer = 0;
+                        game.spawnParticles(this.centerX, this.bottom, 'hit', 10);
+                    }
+                    break;
+
+                case 'projectile':
+                    if (this.stateTimer % 20 === 1 && this.stateTimer < 80) {
+                        const angle = Math.atan2(player.centerY - this.centerY, player.centerX - this.centerX);
+                        const speed = 5 + this.phase;
+                        game.createProjectile(
+                            this.centerX, this.centerY,
+                            Math.cos(angle) * speed,
+                            Math.sin(angle) * speed,
+                            'enemy'
+                        );
+                    }
+                    if (this.stateTimer > 100) {
+                        this.state = 'cooldown';
+                        this.stateTimer = 0;
+                    }
+                    break;
+
+                case 'slam':
+                    if (this.stateTimer < 30) {
+                        this.velocityY = -2;
+                    } else if (this.stateTimer === 30) {
+                        this.velocityY = 15;
+                    }
+                    this.y += this.velocityY;
+
+                    if (this.stateTimer > 30 && this.y >= game.level.height * TILE_SIZE - this.height - 64) {
+                        this.y = game.level.height * TILE_SIZE - this.height - 64;
+                        this.velocityY = 0;
+                        // Shockwave
+                        for (let i = -3; i <= 3; i++) {
+                            game.createProjectile(
+                                this.centerX + i * 50, this.bottom,
+                                i * 2, -5,
+                                'enemy'
+                            );
+                        }
+                        game.spawnParticles(this.centerX, this.bottom, 'hit', 20);
+                        this.state = 'cooldown';
+                        this.stateTimer = 0;
+                    }
+                    break;
+
+                case 'barrage':
+                    if (this.stateTimer % 8 === 1 && this.stateTimer < 120) {
+                        const angle = (this.stateTimer / 8) * 0.5 + Math.PI;
+                        game.createProjectile(
+                            this.centerX, this.centerY,
+                            Math.cos(angle) * 6,
+                            Math.sin(angle) * 6,
+                            'enemy'
+                        );
+                        game.createProjectile(
+                            this.centerX, this.centerY,
+                            Math.cos(-angle) * 6,
+                            Math.sin(-angle) * 6,
+                            'enemy'
+                        );
+                    }
+                    if (this.stateTimer > 130) {
+                        this.state = 'cooldown';
+                        this.stateTimer = 0;
+                    }
+                    break;
+            }
+        }
+
+        takeDamage(amount) {
+            if (this.invincible || this.dead) return;
+
+            this.hp -= amount;
+            this.invincible = true;
+            this.invincibleTimer = 30;
+
+            game.addScore(50);
+
+            if (this.hp <= 0) {
+                this.dead = true;
+                this.deathTimer = 0;
+                game.addScore(5000);
+            }
+        }
+
+        intersects(other) {
+            // Smaller hitbox for fairness
+            const padding = 20;
+            return this.left + padding < other.right &&
+                   this.right - padding > other.left &&
+                   this.top + padding < other.bottom &&
+                   this.bottom - padding > other.top;
+        }
+
+        render(ctx, camera) {
+            const screenX = this.x - camera.x;
+            const screenY = this.y - camera.y;
+
+            // Invincibility flash
+            if (this.invincible && Math.floor(this.invincibleTimer / 3) % 2 === 0) {
+                ctx.globalAlpha = 0.6;
+            }
+
+            // Death animation
+            if (this.dead) {
+                ctx.globalAlpha = 1 - this.deathTimer / 180;
+                const shake = Math.sin(this.deathTimer * 0.5) * 5;
+                ctx.translate(shake, 0);
+            }
+
+            // Draw Caiso body
+            ctx.save();
+            if (this.facing === -1) {
+                ctx.translate(screenX + this.width, screenY);
+                ctx.scale(-1, 1);
+            } else {
+                ctx.translate(screenX, screenY);
+            }
+
+            // Shadow body
+            const pulse = Math.sin(this.animFrame * 0.3) * 5;
+            ctx.fillStyle = '#1a0a1a';
+            ctx.beginPath();
+            ctx.ellipse(64, 80 + pulse, 60, 70, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner glow
+            ctx.fillStyle = '#4a1a4a';
+            ctx.beginPath();
+            ctx.ellipse(64, 80 + pulse, 45, 55, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouth
+            const mouthOpen = this.state === 'roar' ? 50 : 35;
+            ctx.fillStyle = '#0a0a0a';
+            ctx.beginPath();
+            ctx.ellipse(64, 85 + pulse, 40, mouthOpen, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Teeth
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 8; i++) {
+                const tx = 30 + i * 9;
+                ctx.beginPath();
+                ctx.moveTo(tx, 60 + pulse);
+                ctx.lineTo(tx + 4, 75 + pulse);
+                ctx.lineTo(tx + 8, 60 + pulse);
+                ctx.fill();
+            }
+
+            // Bottom teeth
+            for (let i = 0; i < 6; i++) {
+                const tx = 38 + i * 9;
+                ctx.beginPath();
+                ctx.moveTo(tx, 110 + pulse);
+                ctx.lineTo(tx + 4, 95 + pulse);
+                ctx.lineTo(tx + 8, 110 + pulse);
+                ctx.fill();
+            }
+
+            // Red glow in mouth
+            ctx.fillStyle = '#FF0000';
+            ctx.globalAlpha = 0.3 + Math.sin(this.animFrame * 0.5) * 0.2;
+            ctx.beginPath();
+            ctx.ellipse(64, 85 + pulse, 25, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Clock eyes
+            const eyeY = 30 + pulse;
+            // Left eye
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(40, eyeY, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(40, eyeY, 15, 0, Math.PI * 2);
+            ctx.fill();
+            // Clock hands
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            const time1 = this.animFrame * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(40, eyeY);
+            ctx.lineTo(40 + Math.cos(time1) * 10, eyeY + Math.sin(time1) * 10);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(40, eyeY);
+            ctx.lineTo(40 + Math.cos(time1 * 0.1) * 7, eyeY + Math.sin(time1 * 0.1) * 7);
+            ctx.stroke();
+
+            // Right eye
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(88, eyeY, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(88, eyeY, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(88, eyeY);
+            ctx.lineTo(88 + Math.cos(-time1) * 10, eyeY + Math.sin(-time1) * 10);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(88, eyeY);
+            ctx.lineTo(88 + Math.cos(-time1 * 0.1) * 7, eyeY + Math.sin(-time1 * 0.1) * 7);
+            ctx.stroke();
+
+            // Tentacles
+            ctx.fillStyle = '#2a0a2a';
+            for (let i = 0; i < 4; i++) {
+                const tx = 20 + i * 30;
+                const wave = Math.sin(this.animFrame * 0.2 + i) * 10;
+                ctx.beginPath();
+                ctx.moveTo(tx, 120);
+                ctx.quadraticCurveTo(tx + wave, 140, tx - 5, 160);
+                ctx.quadraticCurveTo(tx + wave * 0.5, 145, tx + 10, 120);
+                ctx.fill();
+            }
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+
+            // HP Bar
+            if (!this.dead) {
+                const barWidth = 200;
+                const barX = screenX + this.width/2 - barWidth/2;
+                const barY = screenY - 30;
+
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(barX, barY, barWidth, 12);
+
+                const hpPercent = this.hp / this.maxHp;
+                const hpColor = hpPercent > 0.5 ? '#00FF00' :
+                               hpPercent > 0.25 ? '#FFFF00' : '#FF0000';
+                ctx.fillStyle = hpColor;
+                ctx.fillRect(barX + 2, barY + 2, (barWidth - 4) * hpPercent, 8);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('CAISO', barX + barWidth/2, barY - 5);
+                ctx.textAlign = 'left';
+            }
+        }
+    }
+
+    // ============================================
     // LEVEL SYSTEM
     // ============================================
     class Level {
@@ -1328,9 +1823,14 @@
             // Spawn enemies
             if (data.enemies) {
                 data.enemies.forEach(e => {
-                    this.enemies.push(new Enemy(e.x, e.y, e.type));
+                    if (e.type === 'boss') {
+                        this.enemies.push(new Boss(e.x, e.y));
+                    } else {
+                        this.enemies.push(new Enemy(e.x, e.y, e.type));
+                    }
                 });
             }
+            this.isBossLevel = data.isBossLevel || false;
 
             // Spawn items
             if (data.items) {
@@ -1443,11 +1943,42 @@
                 if (item.collected) return;
                 const screenX = item.x - camera.x;
                 const screenY = item.y - camera.y;
+                const bob = Math.sin(Date.now() / 200) * 3;
 
                 if (item.type === 'coin') {
                     const coin = Sprites.cache.uiCoin;
-                    const bob = Math.sin(Date.now() / 200) * 3;
                     ctx.drawImage(coin, screenX, screenY + bob);
+                }
+                else if (item.type === 'upgrade') {
+                    // Glowing chess piece
+                    ctx.save();
+                    ctx.translate(screenX + 12, screenY + bob + 12);
+                    const glow = Math.sin(Date.now() / 150) * 0.3 + 0.7;
+                    ctx.globalAlpha = glow;
+                    ctx.fillStyle = '#FF00FF';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#FFD700';
+                    // Pawn shape
+                    ctx.beginPath();
+                    ctx.arc(0, -5, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(-4, 0, 8, 10);
+                    ctx.fillRect(-8, 10, 16, 4);
+                    ctx.restore();
+                }
+                else if (item.type === 'heart') {
+                    const heart = Sprites.cache.uiHeart;
+                    if (heart) {
+                        ctx.save();
+                        const scale = 1 + Math.sin(Date.now() / 200) * 0.1;
+                        ctx.translate(screenX + 10, screenY + bob + 10);
+                        ctx.scale(scale, scale);
+                        ctx.drawImage(heart, -10, -10);
+                        ctx.restore();
+                    }
                 }
             });
         }
@@ -1619,6 +2150,38 @@
                     ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2);
                     ctx.fill();
                     break;
+                case 'doubleJump':
+                    ctx.fillStyle = '#00FFFF';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'dash':
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(-this.size, -this.size/4, this.size * 2, this.size/2);
+                    break;
+                case 'upgrade':
+                    ctx.fillStyle = '#FF00FF';
+                    // Star shape
+                    ctx.beginPath();
+                    for (let i = 0; i < 5; i++) {
+                        const angle = (i * 4 * Math.PI / 5) - Math.PI / 2;
+                        const r = i % 2 === 0 ? this.size : this.size * 0.5;
+                        ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                case 'heal':
+                    ctx.fillStyle = '#FF6666';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'throw':
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(-this.size/2, -this.size/3, this.size, this.size * 0.6);
+                    break;
             }
 
             ctx.restore();
@@ -1783,11 +2346,196 @@
                 items: [
                     { type: 'coin', x: 380, y: 440 },
                     { type: 'coin', x: 600, y: 340 },
-                    { type: 'coin', x: 900, y: 540 },
+                    { type: 'upgrade', x: 900, y: 340 }, // Knight upgrade
                     { type: 'coin', x: 1300, y: 440 },
                     { type: 'coin', x: 1700, y: 380 },
                     { type: 'coin', x: 2000, y: 400 }
                 ]
+            });
+
+            // Level 3: World 2 - Tactical Corridor
+            const level3Tiles = [];
+            const h3 = 22;
+            const w3 = 90;
+
+            for (let y = 0; y < h3; y++) {
+                const row = [];
+                for (let x = 0; x < w3; x++) {
+                    if (y >= h3 - 2) {
+                        // More gaps
+                        if ((x >= 15 && x <= 18) || (x >= 30 && x <= 35) ||
+                            (x >= 50 && x <= 53) || (x >= 70 && x <= 74)) {
+                            row.push(0);
+                        } else {
+                            row.push((x + y) % 2 === 0 ? 5 : 6);
+                        }
+                    }
+                    // Vertical walls creating corridors
+                    else if (x === 25 && y >= 8 && y <= 16) {
+                        row.push(1);
+                    }
+                    else if (x === 55 && y >= 6 && y <= 14) {
+                        row.push(1);
+                    }
+                    // Platforms
+                    else if (y === 14 && ((x >= 8 && x <= 12) || (x >= 38 && x <= 44))) {
+                        row.push(2);
+                    }
+                    else if (y === 10 && ((x >= 18 && x <= 23) || (x >= 58 && x <= 65))) {
+                        row.push(2);
+                    }
+                    else if (y === 16 && x >= 75 && x <= 85) {
+                        row.push(2);
+                    }
+                    else if (x === 0 || x === w3 - 1) {
+                        row.push(1);
+                    }
+                    else {
+                        row.push(0);
+                    }
+                }
+                level3Tiles.push(row);
+            }
+
+            this.levels.push({
+                width: w3,
+                height: h3,
+                tiles: level3Tiles,
+                playerStart: { x: 64, y: 600 },
+                enemies: [
+                    { type: 'knight', x: 200, y: 630 },
+                    { type: 'bishop', x: 450, y: 600 },
+                    { type: 'knight', x: 600, y: 630 },
+                    { type: 'rook', x: 900, y: 630 },
+                    { type: 'knight', x: 1100, y: 630 },
+                    { type: 'bishop', x: 1300, y: 600 },
+                    { type: 'rook', x: 1600, y: 630 },
+                    { type: 'knight', x: 1900, y: 280 },
+                    { type: 'bishop', x: 2200, y: 480 },
+                    { type: 'rook', x: 2500, y: 630 }
+                ],
+                items: [
+                    { type: 'coin', x: 350, y: 400 },
+                    { type: 'heart', x: 700, y: 280 },
+                    { type: 'coin', x: 1000, y: 400 },
+                    { type: 'upgrade', x: 1400, y: 280 }, // Bishop upgrade
+                    { type: 'coin', x: 1800, y: 480 },
+                    { type: 'coin', x: 2400, y: 480 }
+                ]
+            });
+
+            // Level 4: World 3 - King's Palace
+            const level4Tiles = [];
+            const h4 = 25;
+            const w4 = 100;
+
+            for (let y = 0; y < h4; y++) {
+                const row = [];
+                for (let x = 0; x < w4; x++) {
+                    if (y >= h4 - 2) {
+                        // Alternating floor
+                        if ((x >= 20 && x <= 24) || (x >= 45 && x <= 50) ||
+                            (x >= 70 && x <= 75)) {
+                            row.push(0);
+                        } else {
+                            row.push((x + y) % 2 === 0 ? 5 : 6);
+                        }
+                    }
+                    // Tower structures
+                    else if ((x === 30 || x === 60) && y >= 5) {
+                        row.push(1);
+                    }
+                    // Platforms
+                    else if (y === 16 && ((x >= 10 && x <= 18) || (x >= 35 && x <= 45))) {
+                        row.push(2);
+                    }
+                    else if (y === 12 && ((x >= 25 && x <= 29) || (x >= 50 && x <= 58))) {
+                        row.push(2);
+                    }
+                    else if (y === 8 && x >= 65 && x <= 75) {
+                        row.push(2);
+                    }
+                    else if (y === 18 && x >= 80 && x <= 95) {
+                        row.push(2);
+                    }
+                    else if (x === 0 || x === w4 - 1) {
+                        row.push(1);
+                    }
+                    else {
+                        row.push(0);
+                    }
+                }
+                level4Tiles.push(row);
+            }
+
+            this.levels.push({
+                width: w4,
+                height: h4,
+                tiles: level4Tiles,
+                playerStart: { x: 64, y: 700 },
+                enemies: [
+                    { type: 'rook', x: 200, y: 730 },
+                    { type: 'knight', x: 400, y: 730 },
+                    { type: 'bishop', x: 600, y: 700 },
+                    { type: 'rook', x: 850, y: 730 },
+                    { type: 'knight', x: 1100, y: 350 },
+                    { type: 'bishop', x: 1400, y: 700 },
+                    { type: 'rook', x: 1700, y: 730 },
+                    { type: 'knight', x: 2000, y: 220 },
+                    { type: 'bishop', x: 2300, y: 700 },
+                    { type: 'rook', x: 2600, y: 540 }
+                ],
+                items: [
+                    { type: 'coin', x: 450, y: 480 },
+                    { type: 'coin', x: 800, y: 350 },
+                    { type: 'heart', x: 1200, y: 350 },
+                    { type: 'upgrade', x: 1600, y: 350 }, // Rook upgrade
+                    { type: 'coin', x: 2100, y: 220 },
+                    { type: 'coin', x: 2800, y: 540 }
+                ]
+            });
+
+            // Level 5: Boss Arena - Caiso's Domain
+            const level5Tiles = [];
+            const h5 = 20;
+            const w5 = 40;
+
+            for (let y = 0; y < h5; y++) {
+                const row = [];
+                for (let x = 0; x < w5; x++) {
+                    if (y >= h5 - 2) {
+                        row.push((x + y) % 2 === 0 ? 5 : 6);
+                    }
+                    else if (x === 0 || x === w5 - 1) {
+                        row.push(1);
+                    }
+                    // Platforms for boss fight
+                    else if (y === 12 && ((x >= 5 && x <= 10) || (x >= 29 && x <= 34))) {
+                        row.push(2);
+                    }
+                    else if (y === 8 && x >= 15 && x <= 24) {
+                        row.push(2);
+                    }
+                    else {
+                        row.push(0);
+                    }
+                }
+                level5Tiles.push(row);
+            }
+
+            this.levels.push({
+                width: w5,
+                height: h5,
+                tiles: level5Tiles,
+                playerStart: { x: 64, y: 540 },
+                enemies: [
+                    { type: 'boss', x: 600, y: 400 }
+                ],
+                items: [
+                    { type: 'heart', x: 200, y: 340 },
+                    { type: 'heart', x: 1000, y: 340 }
+                ],
+                isBossLevel: true
             });
         },
 
@@ -1833,7 +2581,8 @@
         },
 
         addScore(amount) {
-            this.score += amount;
+            const multiplier = this.player ? this.player.getComboMultiplier() : 1;
+            this.score += Math.floor(amount * multiplier);
         },
 
         gameOver() {
@@ -1866,11 +2615,16 @@
                         // Stomp check
                         if (this.player.velocityY > 0 &&
                             this.player.bottom < enemy.centerY) {
+                            const wasAlive = enemy.hp > 0;
                             enemy.takeDamage(1);
                             this.player.velocityY = PHYSICS.JUMP_FORCE * 0.6;
                             this.spawnParticles(enemy.centerX, enemy.centerY, 'hit');
+                            if (wasAlive) {
+                                this.player.addCombo();
+                            }
                         } else {
                             this.player.takeDamage(1);
+                            this.player.combo = 0; // Reset combo on hit
                         }
                     }
 
@@ -1884,9 +2638,13 @@
                     // Check hit on enemies
                     this.level.enemies.forEach(enemy => {
                         if (!attack.hits.has(enemy) && !enemy.dead && attack.intersects(enemy)) {
+                            const wasAlive = enemy.hp > 0;
                             enemy.takeDamage(attack.damage);
                             attack.hits.add(enemy);
                             this.spawnParticles(enemy.centerX, enemy.centerY, 'hit');
+                            if (wasAlive) {
+                                this.player.addCombo();
+                            }
                         }
                     });
 
@@ -1897,10 +2655,27 @@
                 this.projectiles = this.projectiles.filter(proj => {
                     const remove = proj.update(this.level);
 
+                    // Player projectile hits enemy
+                    if (proj.owner === 'player') {
+                        this.level.enemies.forEach(enemy => {
+                            if (!enemy.dead && enemy.intersects(proj)) {
+                                const damage = this.player.weaponLevel >= 2 ? 2 : 1;
+                                const wasAlive = enemy.hp > 0;
+                                enemy.takeDamage(damage);
+                                this.spawnParticles(enemy.centerX, enemy.centerY, 'hit');
+                                proj.lifetime = 0; // Destroy projectile
+                                if (wasAlive) {
+                                    this.player.addCombo();
+                                }
+                            }
+                        });
+                    }
+
                     // Check hit on player
                     if (proj.owner === 'enemy' && !this.player.invincible) {
                         if (this.player.intersects(proj)) {
                             this.player.takeDamage(1);
+                            this.player.combo = 0;
                             return true;
                         }
                     }
@@ -1926,14 +2701,30 @@
                             this.player.coins++;
                             this.addScore(50);
                             this.spawnParticles(item.x, item.y, 'coin', 5);
+                        } else if (item.type === 'upgrade') {
+                            this.player.upgradeWeapon();
+                            this.addScore(500);
+                        } else if (item.type === 'heart') {
+                            this.player.hp = Math.min(this.player.hp + 1, this.player.maxHp);
+                            this.spawnParticles(item.x, item.y, 'heal', 8);
                         }
                     }
                 });
 
                 // Check stage clear
-                if (this.level.enemies.length === 0 &&
-                    this.player.x > this.level.width * TILE_SIZE - 100) {
-                    this.nextLevel();
+                const allEnemiesDead = this.level.enemies.every(e => e.dead);
+                const atEnd = this.player.x > this.level.width * TILE_SIZE - 100;
+
+                if (this.level.isBossLevel) {
+                    // Boss level: just need to defeat boss
+                    if (allEnemiesDead && this.level.enemies.length > 0) {
+                        this.nextLevel();
+                    }
+                } else {
+                    // Normal level: defeat all enemies and reach end
+                    if (this.level.enemies.length === 0 && atEnd) {
+                        this.nextLevel();
+                    }
                 }
             }
             else if (this.state === 'gameover' || this.state === 'victory') {
@@ -1989,18 +2780,39 @@
             ctx.font = '24px Georgia, serif';
             ctx.fillText('Chess Platformer Adventure', GAME_WIDTH/2, 230);
 
-            // Instructions
-            ctx.font = '18px sans-serif';
+            // Instructions - Two columns
+            ctx.font = '16px sans-serif';
             ctx.fillStyle = '#888';
-            ctx.fillText('Arrow Keys / WASD to Move', GAME_WIDTH/2, 320);
-            ctx.fillText('Space / W to Jump', GAME_WIDTH/2, 350);
-            ctx.fillText('Z / J to Attack', GAME_WIDTH/2, 380);
+
+            // Left column
+            ctx.textAlign = 'right';
+            ctx.fillText('Move:', GAME_WIDTH/2 - 20, 300);
+            ctx.fillText('Jump:', GAME_WIDTH/2 - 20, 325);
+            ctx.fillText('Attack:', GAME_WIDTH/2 - 20, 350);
+            ctx.fillText('Throw Book:', GAME_WIDTH/2 - 20, 375);
+            ctx.fillText('Dash:', GAME_WIDTH/2 - 20, 400);
+
+            // Right column
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#AAA';
+            ctx.fillText('Arrow Keys / WASD', GAME_WIDTH/2 + 20, 300);
+            ctx.fillText('Space / W', GAME_WIDTH/2 + 20, 325);
+            ctx.fillText('Z / J', GAME_WIDTH/2 + 20, 350);
+            ctx.fillText('X / K', GAME_WIDTH/2 + 20, 375);
+            ctx.fillText('Shift + Direction', GAME_WIDTH/2 + 20, 400);
+
+            // Features
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#666';
+            ctx.font = '14px sans-serif';
+            ctx.fillText('Collect upgrades to unlock new abilities!', GAME_WIDTH/2, 440);
+            ctx.fillText('5 Stages • 4 Weapon Upgrades • Epic Boss Fight', GAME_WIDTH/2, 460);
 
             // Start prompt
             const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
             ctx.fillStyle = `rgba(218, 165, 32, ${pulse})`;
             ctx.font = 'bold 28px sans-serif';
-            ctx.fillText('Press SPACE or Z to Start', GAME_WIDTH/2, 480);
+            ctx.fillText('Press SPACE or Z to Start', GAME_WIDTH/2, 510);
 
             ctx.textAlign = 'left';
         },
@@ -2083,6 +2895,45 @@
             ctx.textAlign = 'center';
             ctx.fillText(`STAGE ${this.stageNum}`, GAME_WIDTH/2, 38);
 
+            // Weapon display
+            ctx.textAlign = 'left';
+            ctx.font = '14px monospace';
+            ctx.fillStyle = '#DAA520';
+            ctx.fillText(`♟ ${this.player.getWeaponName()}`, 20, 70);
+
+            // Combo counter (with pulse effect)
+            if (this.player.combo > 0) {
+                const pulse = 1 + Math.sin(Date.now() / 100) * 0.1;
+                const comboColors = ['#FFFFFF', '#FFFF00', '#FF8800', '#FF0000', '#FF00FF'];
+                const colorIndex = Math.min(Math.floor(this.player.combo / 3), comboColors.length - 1);
+
+                ctx.save();
+                ctx.translate(GAME_WIDTH / 2, 70);
+                ctx.scale(pulse, pulse);
+                ctx.font = 'bold 24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = comboColors[colorIndex];
+                ctx.fillText(`${this.player.combo} COMBO!`, 0, 0);
+
+                // Multiplier
+                ctx.font = '14px sans-serif';
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(`×${this.player.getComboMultiplier().toFixed(1)}`, 0, 18);
+                ctx.restore();
+            }
+
+            // Dash cooldown indicator
+            if (this.player.dashCooldown > 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(20, 85, 60 * (1 - this.player.dashCooldown / 60), 4);
+            } else {
+                ctx.fillStyle = '#00FF00';
+                ctx.fillRect(20, 85, 60, 4);
+                ctx.font = '10px monospace';
+                ctx.fillStyle = '#00FF00';
+                ctx.fillText('DASH', 20, 98);
+            }
+
             ctx.textAlign = 'left';
         },
 
@@ -2107,24 +2958,50 @@
         },
 
         renderVictory() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
+            // Animated stars background
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 20; i++) {
+                const x = (Date.now() / 50 + i * 100) % GAME_WIDTH;
+                const y = Math.sin(i + Date.now() / 500) * 50 + GAME_HEIGHT / 2;
+                const size = Math.sin(Date.now() / 200 + i) * 2 + 3;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
             ctx.fillStyle = '#DAA520';
-            ctx.font = 'bold 48px Georgia, serif';
+            ctx.font = 'bold 56px Georgia, serif';
             ctx.textAlign = 'center';
-            ctx.fillText('♚ VICTORY! ♚', GAME_WIDTH/2, GAME_HEIGHT/2 - 50);
+            ctx.fillText('♚ VICTORY! ♚', GAME_WIDTH/2, 140);
 
             ctx.fillStyle = '#FFFFFF';
             ctx.font = '28px Georgia, serif';
-            ctx.fillText('You saved your friend!', GAME_WIDTH/2, GAME_HEIGHT/2 + 10);
+            ctx.fillText('Caiso has been defeated!', GAME_WIDTH/2, 200);
+            ctx.fillText('You saved your friend!', GAME_WIDTH/2, 240);
 
-            ctx.font = '24px sans-serif';
-            ctx.fillText(`Final Score: ${this.score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 50);
+            // Stats box
+            ctx.fillStyle = 'rgba(218, 165, 32, 0.2)';
+            ctx.fillRect(GAME_WIDTH/2 - 150, 270, 300, 150);
+            ctx.strokeStyle = '#DAA520';
+            ctx.strokeRect(GAME_WIDTH/2 - 150, 270, 300, 150);
 
-            ctx.fillStyle = '#888';
-            ctx.font = '18px sans-serif';
-            ctx.fillText('Press SPACE to Return to Title', GAME_WIDTH/2, GAME_HEIGHT/2 + 110);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '22px monospace';
+            ctx.fillText(`Final Score: ${this.score.toLocaleString()}`, GAME_WIDTH/2, 310);
+
+            ctx.font = '18px monospace';
+            ctx.fillText(`Coins Collected: ${this.player.coins}`, GAME_WIDTH/2, 345);
+            ctx.fillText(`Max Combo: ${this.player.maxCombo}`, GAME_WIDTH/2, 375);
+            ctx.fillText(`Final Weapon: ${this.player.getWeaponName()}`, GAME_WIDTH/2, 405);
+
+            // Return prompt
+            const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+            ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+            ctx.font = '20px sans-serif';
+            ctx.fillText('Press SPACE to Return to Title', GAME_WIDTH/2, 480);
 
             ctx.textAlign = 'left';
         }
