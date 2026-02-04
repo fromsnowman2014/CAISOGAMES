@@ -66,8 +66,7 @@ async def generate_image(prompt: str, width: int = 512, height: int = 512, style
             }]
         }],
         "generationConfig": {
-            "responseModalities": ["image", "text"],
-            "responseMimeType": "image/png"
+            "responseModalities": ["image", "text"]
         }
     }
 
