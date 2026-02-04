@@ -201,3 +201,7 @@ This generator is designed to work with the CAISOGAMES graphics pipeline:
 4. Follow naming convention: `{entity}_{state}_{frame}.png`
 
 See `/CLAUDE.md` for full game development guidelines.
+
+## External API Usage
+
+To use this image generator from other games or applications (Unity, Godot, Web), see the [API Usage Guide](API_USAGE.md).
