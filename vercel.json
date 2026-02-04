@@ -10,16 +10,14 @@
       "use": "@vercel/static"
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/generate-image",
-      "destination": "/api/generate_image"
-    }
-  ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/generate-image",
+      "dest": "/api/generate_image.py"
+    },
+    {
+      "src": "/api/generate_image",
+      "dest": "/api/generate_image.py"
     },
     {
       "src": "/games/(.*)",
