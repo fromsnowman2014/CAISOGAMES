@@ -10,6 +10,12 @@
       "use": "@vercel/static"
     }
   ],
+  "rewrites": [
+    {
+      "source": "/api/generate-image",
+      "destination": "/api/generate_image"
+    }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
