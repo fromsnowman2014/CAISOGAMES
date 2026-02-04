@@ -53,9 +53,10 @@ asyncio.run(generate())
 ```
 
 ### Asset Requirements
-- All assets saved in `./assets/sprites/` or `./assets/backgrounds/`
-- File format: PNG (transparent background for sprites)
-- Naming convention: `{entity}_{state}_{frame}.png` (e.g., `mario_walk_01.png`)
+- **Game-specific assets:** Save to `games/[game-name]/assets/sprites/` or `backgrounds/`
+- **Shared assets (rare):** Save to root `./assets/` folder only if used by multiple games
+- File format: PNG (transparent background for sprites), SVG (for embedded graphics)
+- Naming convention: `{entity}_{state}_{frame}.png` (e.g., `jay_walk_01.png`)
 
 ## Iterative Refinement Process
 1. **Drafting:** Generate a base sprite using a prompt (e.g., "16-bit pixel art of a plumber jumping, side view").
@@ -77,9 +78,9 @@ CAISOGAMES/
 ├── CLAUDE.md                     # This file - development guidelines
 ├── api/
 │   └── generate-image.py         # Vercel serverless function (image proxy)
-├── assets/
-│   ├── sprites/                  # Character and object sprites
-│   └── backgrounds/              # Background images
+├── assets/                       # DEPRECATED: Use game-specific assets folders
+│   ├── sprites/
+│   └── backgrounds/
 ├── image_generator/              # Python package for AI image generation
 │   ├── generators/               # Generator backends (Gemini, Mock, Vercel)
 │   ├── processors/               # Image processing utilities
@@ -89,11 +90,30 @@ CAISOGAMES/
 │   ├── process_image.py          # Image processing (resize, bg removal)
 │   └── gen_gif.py                # GIF animation generator
 ├── games/
-│   ├── feeding-caiso/            # Feeding Caiso game (standalone)
-│   │   └── index.html
-│   └── [new-game]/               # Future games go here
-├── docs/
-│   ├── PRD.md
+│   ├── feeding-caiso/            # Feeding Caiso game
+│   │   ├── index.html            # Complete game (single-file)
+│   │   ├── docs/                 # Game-specific documentation
+│   │   │   ├── PRD.md
+│   │   │   └── TECHNICAL_DESIGN.md
+│   │   └── assets/               # Game-specific assets (reserved)
+│   │       ├── sprites/
+│   │       ├── backgrounds/
+│   │       └── ui/
+│   ├── caiso-mario/              # Caiso Mario platformer game
+│   │   ├── index.html            # Complete game (single-file)
+│   │   ├── docs/                 # Game-specific documentation
+│   │   │   ├── PRD.md
+│   │   │   ├── TECHNICAL_DESIGN.md
+│   │   │   ├── ART_STYLE_GUIDE.md
+│   │   │   ├── DEVELOPMENT_PLAN.md
+│   │   │   └── IMAGE_GENERATION_GUIDE.md
+│   │   └── assets/               # Game-specific assets
+│   │       ├── sprites/
+│   │       ├── backgrounds/
+│   │       └── ui/
+│   └── [new-game]/               # Future games follow same structure
+├── docs/                         # Platform-level documentation
+│   ├── PRD.md                    # Platform PRD
 │   ├── TECHNICAL_DESIGN.md
 │   ├── INTERFACE_DESIGN.md
 │   └── PLATFORM_ARCHITECTURE.md
@@ -101,17 +121,46 @@ CAISOGAMES/
 └── package.json
 ```
 
+### Game Folder Structure (Template)
+Each game should follow this modular structure:
+```
+games/[game-name]/
+├── index.html              # Complete standalone game
+├── docs/                   # Game-specific documentation
+│   ├── PRD.md              # Product requirements
+│   ├── TECHNICAL_DESIGN.md # Technical architecture
+│   └── [other docs]        # Art guides, dev plans, etc.
+└── assets/                 # Game-specific assets (optional)
+    ├── sprites/
+    ├── backgrounds/
+    └── ui/
+```
+
+**Important:** Each game's documentation and assets are isolated within its folder. This prevents context confusion when developing individual games.
+
 ## Game Development Workflow
 
 ### Adding a New Game
-1. Create folder: `games/[game-name]/`
-2. Create standalone `index.html` with all game logic
-3. Add "Back to Hub" button linking to `../../`
-4. Update landing page `index.html`:
+1. Create game folder structure:
+   ```bash
+   mkdir -p games/[game-name]/{docs,assets/{sprites,backgrounds,ui}}
+   ```
+2. Create `docs/PRD.md` with game requirements
+3. Create `docs/TECHNICAL_DESIGN.md` with architecture
+4. Create standalone `index.html` with all game logic
+5. Add "Back to Hub" button linking to `../../`
+6. Update landing page `index.html`:
    - Add game card to grid
    - Create inline SVG thumbnail
-5. Generate assets using graphics pipeline
-6. Test navigation both ways
+7. Generate assets using graphics pipeline (save to game's assets folder)
+8. Test navigation both ways
+
+### Working on Existing Games
+When developing a specific game:
+- Read only the game's `docs/` folder for context
+- Save assets to the game's `assets/` folder
+- Keep changes isolated to the game folder
+- Do NOT read other games' docs unless explicitly needed
 
 ### Asset Naming Conventions
 | Type | Pattern | Example |
