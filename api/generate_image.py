@@ -33,7 +33,7 @@ import httpx
 # Gemini API configuration
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-IMAGEN_MODEL = "imagen-3.0-generate-001"
+IMAGEN_MODEL = "imagen-3.0-generate-002"
 
 
 def get_style_prompt(style: str) -> str:
@@ -71,17 +71,18 @@ async def generate_image(prompt: str, width: int = 512, height: int = 512, style
     style_prompt = get_style_prompt(style)
     full_prompt = f"{prompt}. {style_prompt}"
 
-    # Use the generateImages endpoint for Imagen models
-    url = f"{BASE_URL}/models/{IMAGEN_MODEL}:generateImages"
+    # Use the predict endpoint for Imagen models
+    url = f"{BASE_URL}/models/{IMAGEN_MODEL}:predict"
     aspect_ratio = get_aspect_ratio(width, height)
 
     payload = {
-        "prompt": full_prompt,
-        "config": {
-            "numberOfImages": 1,
+        "instances": [{
+            "prompt": full_prompt
+        }],
+        "parameters": {
+            "sampleCount": 1,
             "aspectRatio": aspect_ratio,
-            "personGeneration": "ALLOW_ADULT",
-            "outputMimeType": "image/png"
+            "personGeneration": "allow_adult"
         }
     }
 
