@@ -177,7 +177,12 @@
 
     <script>
     // ============================================
-    // FEEDING CAISO v3.0 - Phase 2: Mobile-First Vertical
+    // FEEDING CAISO v4.0 - Phase 3: Unified Art Style
+    // ============================================
+    // Changes in v4.0:
+    // - All characters now use consistent "cute blob" style
+    // - Food items have kawaii faces
+    // - Improved visual consistency across all assets
     // ============================================
 
     // Game Configuration - 9:16 Portrait
@@ -214,14 +219,14 @@
         scoreMultiplier: 3
     };
 
-    // Food definitions with updated assets
+    // Food definitions with kawaii style assets
     const FOODS = {
         apple: { name: 'Apple', asset: 'food_apple', hungerReduction: 0.5, unlockLevel: 1, color: '#e74c3c', key: '1' },
-        dorito: { name: 'Dorito', asset: 'food_dorito', hungerReduction: 0.8, unlockLevel: 10, color: '#f39c12', key: '2' },
-        burger: { name: 'Burger', asset: 'food_burger', hungerReduction: 1.5, unlockLevel: 20, color: '#e67e22', key: '3' },
-        pizza: { name: 'Pizza', asset: 'food_pizza', hungerReduction: 2.5, unlockLevel: 30, color: '#f39c12', key: '4' },
-        golden: { name: 'Golden Apple', asset: 'food_golden_apple', hungerReduction: 5.0, unlockLevel: 50, color: '#ffd700', key: '5' },
-        fever: { name: 'Fever Food', asset: 'food_fever', hungerReduction: 10.0, unlockLevel: 75, color: '#ff006e', key: '6' }
+        donut: { name: 'Donut', asset: 'food_dorito', hungerReduction: 0.8, unlockLevel: 10, color: '#ff6b9d', key: '2' },
+        burger: { name: 'Burger', asset: 'food_burger', hungerReduction: 1.5, unlockLevel: 20, color: '#ff8c42', key: '3' },
+        pizza: { name: 'Pizza', asset: 'food_pizza', hungerReduction: 2.5, unlockLevel: 30, color: '#ffd93d', key: '4' },
+        star: { name: 'Magic Star', asset: 'food_golden_apple', hungerReduction: 5.0, unlockLevel: 50, color: '#ffd700', key: '5' },
+        superstar: { name: 'Super Star', asset: 'food_fever', hungerReduction: 10.0, unlockLevel: 75, color: '#ff006e', key: '6' }
     };
 
     // ============================================
@@ -237,29 +242,30 @@
 
         async loadAll() {
             const assets = {
-                // Caiso sprites
-                caiso_baby: 'sprites/caiso_baby_128x128.png',
-                caiso_young: 'sprites/caiso_young_192x192.png',
-                caiso_adult_hungry: 'sprites/caiso_adult_hungry_256x256.png',
-                caiso_adult_happy: 'sprites/caiso_adult_happy_256x256.png',
-                caiso_elder: 'sprites/caiso_elder_320x320.png',
-                caiso_legendary: 'sprites/caiso_legendary_384x384.png',
+                // Caiso sprites (v2 - unified blob style)
+                caiso_baby: 'sprites/caiso_baby_v2_128x128.png',
+                caiso_young: 'sprites/caiso_young_v2_192x192.png',
+                caiso_adult_hungry: 'sprites/caiso_hungry_v2_256x256.png',
+                caiso_adult_happy: 'sprites/caiso_happy_v2_256x256.png',
+                caiso_adult: 'sprites/caiso_adult_v2_256x256.png',
+                caiso_elder: 'sprites/caiso_adult_v2_256x256.png',  // Use adult for elder
+                caiso_legendary: 'sprites/caiso_adult_v2_256x256.png',  // Use adult for legendary
 
-                // Food sprites
-                food_apple: 'sprites/food_apple_64x64.png',
-                food_burger: 'sprites/food_burger_64x64.png',
-                food_pizza: 'sprites/food_pizza_64x64.png',
-                food_dorito: 'sprites/food_dorito_64x64.png',
-                food_golden_apple: 'sprites/food_golden_apple_64x64.png',
-                food_fever: 'sprites/food_fever_64x64.png',
+                // Food sprites (v2 - kawaii style with faces)
+                food_apple: 'sprites/food_apple_v2_64x64.png',
+                food_burger: 'sprites/food_burger_v2_64x64.png',
+                food_pizza: 'sprites/food_pizza_v2_64x64.png',
+                food_dorito: 'sprites/food_donut_v2_64x64.png',  // Donut replaces dorito
+                food_golden_apple: 'sprites/food_star_64x64.png',  // Star replaces golden apple
+                food_fever: 'sprites/food_star_64x64.png',  // Star for fever food
 
-                // Villager sprites
-                villager_normal: 'sprites/villager_normal_64x64.png',
-                villager_scared: 'sprites/villager_scared_64x64.png',
-                villager_golden: 'sprites/villager_golden_64x64.png',
+                // Villager sprites (v2 - blob style)
+                villager_normal: 'sprites/villager_blob_normal_64x64.png',
+                villager_scared: 'sprites/villager_blob_scared_64x64.png',
+                villager_golden: 'sprites/villager_blob_golden_64x64.png',
 
-                // Player sprite
-                player_idle: 'sprites/player_idle_128x128.png',
+                // Player sprite (v2 - blob style)
+                player_idle: 'sprites/player_blob_96x96.png',
 
                 // Background layers
                 bg_sky: 'backgrounds/bg_sky.png',
