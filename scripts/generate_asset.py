@@ -42,7 +42,8 @@ async def generate_asset(
     prompt: str,
     name: str,
     size: tuple = (64, 64),
-    style: str = 'pixel_art'
+    style: str = 'pixel_art',
+    output_dir: str = None
 ):
     """Generate an asset and save it to the appropriate folder."""
 
@@ -53,8 +54,11 @@ async def generate_asset(
 
     if asset_type == 'sprite':
         # Generate sprite
-        output_dir = Path('assets/sprites')
-        output_dir.mkdir(parents=True, exist_ok=True)
+        if output_dir:
+            out_path = Path(output_dir)
+        else:
+            out_path = Path('assets/sprites')
+        out_path.mkdir(parents=True, exist_ok=True)
 
         image = await service.generate(
             prompt=f"game sprite: {prompt}",
@@ -64,9 +68,9 @@ async def generate_asset(
         )
 
         # Save original
-        output_path = output_dir / f"{name}.png"
-        image.save(output_path)
-        print(f"Saved: {output_path}")
+        final_output_path = out_path / f"{name}.png"
+        image.save(final_output_path)
+        print(f"Saved: {final_output_path}")
 
         # Also save resized version if needed
         if size != (512, 512):
@@ -76,14 +80,17 @@ async def generate_asset(
             pil_image = PILImage.open(io.BytesIO(image.image_data))
             pil_image = pil_image.resize(size, PILImage.Resampling.NEAREST)
 
-            small_path = output_dir / f"{name}_{size[0]}x{size[1]}.png"
+            small_path = out_path / f"{name}_{size[0]}x{size[1]}.png"
             pil_image.save(small_path)
             print(f"Saved resized: {small_path}")
 
     elif asset_type == 'background':
         # Generate background
-        output_dir = Path('assets/backgrounds')
-        output_dir.mkdir(parents=True, exist_ok=True)
+        if output_dir:
+            out_path = Path(output_dir)
+        else:
+            out_path = Path('assets/backgrounds')
+        out_path.mkdir(parents=True, exist_ok=True)
 
         image = await service.generate(
             prompt=f"game background: {prompt}",
@@ -92,14 +99,17 @@ async def generate_asset(
             style=style
         )
 
-        output_path = output_dir / f"{name}.png"
-        image.save(output_path)
-        print(f"Saved: {output_path}")
+        final_output_path = out_path / f"{name}.png"
+        image.save(final_output_path)
+        print(f"Saved: {final_output_path}")
 
     else:
         # Generic image
-        output_dir = Path('assets')
-        output_dir.mkdir(parents=True, exist_ok=True)
+        if output_dir:
+            out_path = Path(output_dir)
+        else:
+            out_path = Path('assets')
+        out_path.mkdir(parents=True, exist_ok=True)
 
         image = await service.generate(
             prompt=prompt,
@@ -108,12 +118,12 @@ async def generate_asset(
             style=style
         )
 
-        output_path = output_dir / f"{name}.png"
-        image.save(output_path)
-        print(f"Saved: {output_path}")
+        final_output_path = out_path / f"{name}.png"
+        image.save(final_output_path)
+        print(f"Saved: {final_output_path}")
 
     print("Done!")
-    return output_path
+    return final_output_path
 
 
 def parse_size(size_str: str) -> tuple:
@@ -161,6 +171,11 @@ Examples:
         default='pixel_art',
         help='Art style (default: pixel_art)'
     )
+    parser.add_argument(
+        '--output', '-o',
+        default=None,
+        help='Output directory (default: assets/sprites or assets/backgrounds)'
+    )
 
     args = parser.parse_args()
 
@@ -188,7 +203,8 @@ Examples:
             prompt=args.prompt,
             name=args.name,
             size=size,
-            style=args.style
+            style=args.style,
+            output_dir=args.output
         ))
     except Exception as e:
         print(f"Error: {e}")

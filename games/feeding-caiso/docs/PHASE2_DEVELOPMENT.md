@@ -1,1016 +1,860 @@
-# Feeding Caiso - Phase 2 Development Plan
+# Feeding Caiso - Phase 2: Visual Overhaul & Vertical Evolution
 
-## Executive Summary
+## Project Vision (Re-defined)
 
-This document outlines a comprehensive Phase 2 development plan to transform Feeding Caiso from a functional prototype into an engaging, polished casual game. The improvements focus on five pillars: **Gameplay Depth**, **Visual Polish**, **Audio Experience**, **Progression Systems**, and **Replayability**.
+> **"From a simple web game to an addictive Mobile-First Action Experience."**
 
----
-
-## Part 1: Current Game Analysis
-
-### 1.1 Core Mechanics Assessment
-
-| Mechanic | Implementation | Rating | Notes |
-|----------|---------------|--------|-------|
-| Hunger System | Starts at 100%, reduce to 0% to win | 3/5 | Lacks tension buildup |
-| Villager Consumption | Every 2 seconds | 2/5 | Too predictable, no variation |
-| Food Throwing | Click/Space to feed | 4/5 | Simple, accessible |
-| Combo System | 1.5s window, multipliers | 4/5 | Good risk/reward |
-| Level Progression | Every 5 hunger reduced | 3/5 | Unlocks feel arbitrary |
-| Food Selection | 6 types, unlock by level | 3/5 | No strategic depth |
-
-### 1.2 Strengths
-
-1. **Accessibility**: One-button core mechanic perfect for target audience (ages 5-12)
-2. **Visual Feedback**: Particles, floating text, and combo indicators provide satisfaction
-3. **Clear Goals**: Simple win/lose conditions easy to understand
-4. **Mobile Ready**: Touch controls and responsive design
-5. **Expressive Character**: Caiso has 4 emotional states creating empathy
-
-### 1.3 Critical Weaknesses
-
-#### Gameplay Issues
-1. **No Tension Curve**: Hunger starts at 100% and only decreases - there's no building threat
-2. **Passive Experience**: Player just spam-clicks without meaningful decisions
-3. **Zero Strategy**: No reason to choose different foods beyond "pick highest unlocked"
-4. **Repetitive Loop**: Same 2-second cycle from start to finish
-5. **Missing Risk/Reward**: No high-risk, high-reward moments
-
-#### Engagement Issues
-1. **No Progression Save**: High scores and achievements not persisted
-2. **No Audio**: Silent gameplay dramatically reduces engagement
-3. **No Variety**: Every game feels identical
-4. **Weak Victory Satisfaction**: Reducing hunger to 0% feels arbitrary
-
-#### Visual Issues
-1. **Static SVG Graphics**: Look like programmer art placeholders
-2. **No Animation Frames**: Characters lack movement animations
-3. **Plain Background**: Static scene with no depth or parallax
-4. **No Visual Progression**: Level 1 looks identical to Level 100
-
-### 1.4 Player Psychology Analysis
-
-**Current Loop (Weak)**:
-```
-Press Button → Food Flies → Number Changes → Repeat
-```
-
-**Target Loop (Engaging)**:
-```
-Assess Threat → Make Decision → Execute → Receive Feedback → Feel Accomplishment → New Threat
-```
+기존의 정적인 데스크탑 웹 게임 경험을 탈피하여, 모바일 환경(9:16 비율)에 최적화된 **세로형 하이퍼 캐주얼 액션 게임**으로 재설계합니다. 핵심 목표는 "한 손 조작의 편리함"과 "시각적 타격감(Juiciness)"의 극대화입니다.
 
 ---
 
-## Part 2: Gameplay Improvements
+## Part 1: Refactoring Plan - Remove, Add, Refine
 
-### 2.1 Core Mechanic Overhaul: Dynamic Hunger System
+### 1.1 Remove (과감히 삭제할 요소)
 
-**Current**: Hunger starts at 100%, decrease only
-**Proposed**: Hunger starts at 50%, increases over time, player must maintain balance
+| Element | Reason | Replacement |
+|---------|--------|-------------|
+| **Landscape Layout (16:10)** | 데스크탑 중심 설계, 모바일에서 불편 | Portrait (9:16) |
+| **Keyboard Controls (WASD)** | 모바일에서 사용 불가 | Virtual Joystick |
+| **Static Background** | 깊이감 없음, 지루함 | Parallax Scrolling |
+| **Hard Borders** | 딱딱한 느낌 | Wall Bounce / Looping |
+| **Fixed Camera** | 성장 시 변화 없음 | Dynamic Zoom Camera |
 
+### 1.2 Add (새롭게 추가할 요소)
+
+#### A. Vertical UX & Controls
 ```javascript
-// New hunger mechanics
-const HUNGER_SYSTEM = {
-    startingHunger: 50,
-    baseIncreaseRate: 0.5,      // Per second
-    levelMultiplier: 1.1,       // Rate increases per level
-    dangerThreshold: 80,        // Visual warning begins
-    criticalThreshold: 95,      // Urgent warning + speed up
-    overflowConsumeRate: 0.5    // Seconds per villager when at 100%
+// Virtual Joystick Configuration
+const JOYSTICK_CONFIG = {
+    zone: 'bottom-half',          // 화면 하단 영역 어디든 터치
+    type: 'floating',             // 터치 위치에 조이스틱 출현
+    size: 100,                    // 조이스틱 크기 (px)
+    threshold: 0.1,               // Dead zone
+    fadeTime: 200                 // 손 뗄 때 페이드아웃
+};
+
+// Safe Zone Design
+const SAFE_ZONES = {
+    top: { height: 60, content: 'HUD (score, level, hunger)' },
+    center: { content: 'Action Area (80% of screen)' },
+    bottom: { height: 120, content: 'Controls + Feed Button' }
 };
 ```
 
-### 2.2 New Mechanic: Food Cooldowns & Energy System
-
-Add strategic depth with cooldown management:
-
+#### B. Visual "Juice" (타격감 및 연출)
 ```javascript
-const FOODS_V2 = {
-    apple: {
-        name: 'Apple',
-        hungerReduction: 5,
-        cooldown: 0,           // Instant, can spam
-        energyCost: 0,
-        unlockLevel: 1
+// Squash & Stretch Animation
+const SQUASH_STRETCH = {
+    move: { scaleX: 1.2, scaleY: 0.8 },    // 이동 시
+    stop: { scaleX: 0.9, scaleY: 1.1 },    // 멈출 때 출렁임
+    eat: { scaleX: 1.3, scaleY: 0.7 },     // 먹을 때
+    duration: 100,
+    easing: 'elastic'
+};
+
+// Particle Effects
+const PARTICLE_TYPES = {
+    eat: {
+        count: 15,
+        colors: ['#ff6b6b', '#ffd93d', '#6bcb77'],
+        size: { min: 4, max: 12 },
+        speed: { min: 3, max: 8 },
+        lifetime: 500
     },
-    sandwich: {
-        name: 'Sandwich',
-        hungerReduction: 12,
-        cooldown: 1000,        // 1 second cooldown
-        energyCost: 1,
-        unlockLevel: 5
+    trail: {
+        count: 1,
+        color: 'rgba(255, 255, 255, 0.3)',
+        size: 8,
+        lifetime: 200
     },
-    burger: {
-        name: 'Burger',
-        hungerReduction: 20,
-        cooldown: 2000,
-        energyCost: 2,
-        unlockLevel: 15
-    },
-    feast: {
-        name: 'Royal Feast',
-        hungerReduction: 40,
-        cooldown: 5000,
-        energyCost: 5,
-        special: 'combo_boost', // Doubles next 3 combos
-        unlockLevel: 30
-    },
-    goldenApple: {
-        name: 'Golden Apple',
-        hungerReduction: 60,
-        cooldown: 8000,
-        energyCost: 8,
-        special: 'time_slow',   // Slows hunger gain for 5s
-        unlockLevel: 50
-    },
-    caisoFavorite: {
-        name: "Caiso's Favorite",
-        hungerReduction: 100,
-        cooldown: 15000,
-        energyCost: 15,
-        special: 'full_heal',   // Also heals 10 villagers
-        unlockLevel: 100
+    fever: {
+        count: 30,
+        colors: ['#ff006e', '#fb5607', '#ffbe0b'],
+        size: { min: 6, max: 16 },
+        speed: { min: 5, max: 15 },
+        lifetime: 800
     }
 };
 
-// Energy regenerates over time, faster with combos
-const ENERGY_SYSTEM = {
-    maxEnergy: 20,
-    baseRegenRate: 1,          // Per second
-    comboRegenBonus: 0.5       // Per combo level
+// Glow Effects (Cyberpunk/Deep Sea Theme)
+const GLOW_CONFIG = {
+    player: { color: '#00d4ff', intensity: 0.6, blur: 15 },
+    food: { color: '#ffd93d', intensity: 0.8, blur: 10 },
+    caiso: { color: '#9b59b6', intensity: 0.5, blur: 20 },
+    fever: { color: '#ff006e', intensity: 1.0, blur: 30 }
 };
 ```
 
-### 2.3 New Mechanic: Special Events
-
-Random events add variety and excitement:
-
+#### C. Game Mechanics (재미 요소)
 ```javascript
-const SPECIAL_EVENTS = {
-    villagerRush: {
-        name: 'Villager Rush!',
-        description: '5 villagers enter at once',
-        frequency: 60000,       // Every ~60 seconds
-        duration: 5000
-    },
-    hungerSpike: {
-        name: 'Hunger Spike!',
-        description: 'Caiso gets extra hungry',
-        effect: 'hunger rate x2 for 10 seconds'
-    },
-    goldenVillager: {
-        name: 'Golden Villager',
-        description: 'Save this one for bonus points!',
-        reward: 'level_up'
-    },
-    foodRain: {
-        name: 'Food Rain!',
-        description: 'Free food falls from sky',
-        effect: 'auto-feeds every 0.5s for 5s'
-    },
-    caisoNap: {
-        name: "Caiso's Nap",
-        description: 'Caiso falls asleep briefly',
-        effect: 'hunger paused for 8 seconds'
+// Fever Mode System
+const FEVER_MODE = {
+    gaugeMax: 100,
+    chargeRate: 5,              // Per food eaten
+    comboBonus: 2,              // Extra charge per combo
+    duration: 5000,             // 5 seconds
+    effects: {
+        invincible: true,
+        speedMultiplier: 2,
+        magnetRange: 200,       // Auto-attract food
+        screenEffect: 'invert', // Visual feedback
+        scoreMultiplier: 3
     }
 };
-```
 
-### 2.4 New Mechanic: Power-Ups
-
-Collectible power-ups spawn on screen:
-
-| Power-Up | Effect | Duration | Spawn Rate |
-|----------|--------|----------|------------|
-| Speed Boost | Throw food 2x faster | 10s | Common |
-| Double Reduction | Food effects doubled | 8s | Uncommon |
-| Shield | Protects 1 villager from being eaten | One-time | Rare |
-| Combo Freeze | Combo timer doesn't decay | 15s | Uncommon |
-| Energy Surge | Instant full energy | Instant | Rare |
-| Time Warp | Slow hunger increase by 50% | 12s | Rare |
-
-### 2.5 Boss Levels (Every 25 Levels)
-
-Special challenge levels with modified rules:
-
-**Level 25 - "Hungry Night"**
-- Dark background, limited visibility
-- Hunger increases 50% faster
-- Reward: Unlock "Night Vision" food (illuminates + feeds)
-
-**Level 50 - "The Feast"**
-- 200% starting hunger
-- All food cooldowns halved
-- Reward: Unlock "Mega Burger"
-
-**Level 75 - "Caiso's Tantrum"**
-- Caiso moves around screen
-- Must aim throws
-- Reward: Unlock "Homing Pizza"
-
-**Level 100 - "Ultimate Challenge"**
-- All previous mechanics combined
-- Hunger increases exponentially
-- Victory: Permanent golden crown for Caiso
-
----
-
-## Part 3: Visual Overhaul
-
-### 3.1 Art Style Direction
-
-**Target Style**: Soft, rounded, colorful cartoon - similar to modern mobile games like Candy Crush meets Monsters Inc.
-
-**Color Palette**:
-```
-Primary Purple (Caiso): #9B59B6, #8E44AD, #6C3483
-Grass Green: #27AE60, #2ECC71, #58D68D
-Sky Blue: #3498DB, #5DADE2, #85C1E9
-Warning Red: #E74C3C, #C0392B
-Gold/Reward: #F1C40F, #F39C12
-UI Dark: #2C3E50, #34495E
-```
-
-### 3.2 Asset Generation Plan
-
-Using the Image Generator API, create the following assets:
-
-#### Caiso Character Sprites (Priority: HIGH)
-```
-Prompt Template: "Cute cartoon purple monster character, large friendly eyes,
-small horns, round body, [EXPRESSION], mobile game style, flat shading,
-transparent background, 256x256 pixels"
-
-Assets Needed:
-1. caiso_idle.png - Neutral, mouth slightly open
-2. caiso_happy.png - Big smile, closed eyes, sparkles
-3. caiso_eating.png - Wide open mouth, chomping animation frame
-4. caiso_sad.png - Tears, droopy expression
-5. caiso_hungry.png - Drooling, desperate look
-6. caiso_sleeping.png - For "Caiso's Nap" event
-7. caiso_angry.png - For boss levels / tantrum
-8. caiso_victory.png - With crown, celebrating
-
-Size: 256x256, PNG with transparency
-```
-
-#### Villager Sprites (Priority: HIGH)
-```
-Prompt Template: "Tiny cute cartoon villager character, simple design,
-[COLOR] shirt, worried expression, chibi style, mobile game,
-transparent background, 64x64 pixels"
-
-Assets Needed:
-1. villager_blue.png - Blue shirt, normal
-2. villager_red.png - Red shirt variant
-3. villager_green.png - Green shirt variant
-4. villager_yellow.png - Yellow shirt variant
-5. villager_scared.png - Terrified expression
-6. villager_golden.png - Special golden villager (glowing)
-
-Size: 64x64, PNG with transparency
-```
-
-#### Player Character (Priority: MEDIUM)
-```
-Prompt Template: "Cartoon character back view, holding woven basket,
-chef hat, colorful outfit, ready to throw food, mobile game style,
-transparent background"
-
-Assets Needed:
-1. player_idle.png - Standing with basket
-2. player_throwing.png - Arm raised, throwing motion
-3. player_celebrating.png - Victory pose
-
-Size: 128x128, PNG with transparency
-```
-
-#### Food Items (Priority: HIGH)
-```
-Prompt Template: "Cartoon [FOOD] icon, shiny, delicious looking,
-mobile game style, simple design, transparent background, 64x64"
-
-Assets Needed:
-1. food_apple.png - Shiny red apple
-2. food_sandwich.png - Layered sandwich
-3. food_burger.png - Juicy burger with toppings
-4. food_pizza.png - Pizza slice with toppings
-5. food_feast.png - Royal banquet platter
-6. food_golden_apple.png - Glowing golden apple
-7. food_caiso_favorite.png - Special purple-themed food
-
-Size: 64x64, PNG with transparency
-```
-
-#### Backgrounds (Priority: MEDIUM)
-```
-Prompt Template: "Cartoon game background, [SCENE], colorful,
-bright, child-friendly, 16:10 aspect ratio, no characters"
-
-Assets Needed:
-1. bg_village_day.png - Sunny village scene
-2. bg_village_sunset.png - Orange/pink sky variant
-3. bg_village_night.png - Dark blue with stars
-4. bg_castle.png - Boss level background
-5. bg_feast_hall.png - Level 50 boss background
-
-Size: 1920x1200 (scales to game)
-```
-
-#### UI Elements (Priority: LOW)
-```
-Assets Needed:
-1. ui_hunger_bar_frame.png - Decorative bar frame
-2. ui_button_feed.png - Feed button design
-3. ui_panel_bg.png - Translucent panel background
-4. ui_combo_badge.png - Combo multiplier badge
-5. ui_level_star.png - Level indicator
-6. icon_energy.png - Energy indicator
-7. icon_cooldown.png - Cooldown overlay
-
-Size: Various
-```
-
-#### Power-Up Icons (Priority: MEDIUM)
-```
-Assets Needed (64x64 each):
-1. powerup_speed.png - Lightning bolt
-2. powerup_double.png - x2 symbol
-3. powerup_shield.png - Protective bubble
-4. powerup_combo.png - Snowflake (freeze)
-5. powerup_energy.png - Battery/bolt
-6. powerup_time.png - Clock/hourglass
-```
-
-#### Particle Effects (Priority: LOW)
-```
-Assets Needed (32x32 each):
-1. particle_sparkle.png - Star sparkle
-2. particle_heart.png - Heart shape
-3. particle_star.png - 5-point star
-4. particle_food_crumb.png - Generic food particle
-```
-
-### 3.3 Animation Specifications
-
-#### Caiso Animations
-```javascript
-const CAISO_ANIMATIONS = {
-    idle: {
-        frames: ['caiso_idle_1', 'caiso_idle_2'],
-        frameTime: 500,
-        loop: true
-    },
-    eating: {
-        frames: ['caiso_eating_1', 'caiso_eating_2', 'caiso_eating_3'],
-        frameTime: 100,
-        loop: false,
-        onComplete: 'idle'
-    },
-    bounce: {
-        amplitude: 8,
-        frequency: 0.003
-    },
-    drool: {
-        enabled: true,
-        threshold: 80,  // hunger level
-        particleRate: 200
-    }
-};
-```
-
-#### Villager Animations
-```javascript
-const VILLAGER_ANIMATIONS = {
-    walk: {
-        frames: ['villager_walk_1', 'villager_walk_2', 'villager_walk_3', 'villager_walk_4'],
-        frameTime: 150,
-        loop: true
-    },
-    scared: {
-        frames: ['villager_scared'],
-        shake: { amplitude: 2, frequency: 0.02 }
-    },
-    eaten: {
-        scale: { from: 1, to: 0, duration: 300 },
-        opacity: { from: 1, to: 0, duration: 300 },
-        position: { y: -30, duration: 300 }
-    }
-};
-```
-
-### 3.4 Parallax Background System
-
-```javascript
-const PARALLAX_LAYERS = [
-    { asset: 'bg_sky', speed: 0, y: 0 },
-    { asset: 'bg_clouds', speed: 0.1, y: 20 },
-    { asset: 'bg_mountains', speed: 0.3, y: 150 },
-    { asset: 'bg_village', speed: 0.5, y: 250 },
-    { asset: 'bg_ground', speed: 1, y: 400 }
+// Evolution System
+const EVOLUTION_TIERS = [
+    { level: 1, name: 'Baby Caiso', scale: 0.5, sprite: 'caiso_baby' },
+    { level: 10, name: 'Young Caiso', scale: 0.7, sprite: 'caiso_young' },
+    { level: 25, name: 'Adult Caiso', scale: 1.0, sprite: 'caiso_adult' },
+    { level: 50, name: 'Elder Caiso', scale: 1.3, sprite: 'caiso_elder' },
+    { level: 100, name: 'Legendary Caiso', scale: 1.5, sprite: 'caiso_legendary' }
 ];
+
+// Combo System Enhanced
+const COMBO_SYSTEM = {
+    window: 1500,               // ms to maintain combo
+    thresholds: [
+        { combo: 3, text: 'Good!', color: '#ffd93d' },
+        { combo: 5, text: 'Great!', color: '#6bcb77' },
+        { combo: 10, text: 'Excellent!', color: '#4ecdc4' },
+        { combo: 20, text: 'UNSTOPPABLE!', color: '#ff006e' }
+    ],
+    multiplier: combo => 1 + Math.floor(combo / 3) * 0.5
+};
 ```
 
----
-
-## Part 4: Audio Design
-
-### 4.1 Sound Effects List
-
-| Sound | Trigger | Priority | Notes |
-|-------|---------|----------|-------|
-| throw_whoosh | Food thrown | High | Short swoosh |
-| eat_chomp | Food eaten | High | Satisfying crunch |
-| combo_ding | Combo increase | High | Musical, ascending |
-| combo_break | Combo lost | Medium | Disappointed sound |
-| villager_scream | Villager eaten | High | Cute "eek!" |
-| level_up | Level increase | High | Triumphant fanfare |
-| unlock_food | New food unlocked | High | Magical chime |
-| powerup_collect | Power-up grabbed | Medium | Positive sparkle |
-| warning_alarm | Hunger > 90% | High | Urgent but not scary |
-| caiso_happy | Low hunger | Low | Content purr |
-| caiso_hungry | High hunger | Low | Stomach growl |
-| victory_fanfare | Win game | High | Full celebration |
-| game_over | Lose game | High | Sad trombone |
-
-### 4.2 Background Music
+### 1.3 Refine (보완 및 개선할 요소)
 
 ```javascript
-const MUSIC_TRACKS = {
-    menu: {
-        file: 'music_menu.mp3',
-        tempo: 'medium',
-        mood: 'playful'
+// Movement Physics - Smooth Lerp
+const PHYSICS = {
+    acceleration: 0.15,         // Lerp factor
+    maxSpeed: 8,
+    friction: 0.92,             // Deceleration when not moving
+    bounceRestitution: 0.6      // Wall bounce elasticity
+};
+
+// Collision Detection - Coyote Time
+const COLLISION = {
+    hitboxScale: 0.7,           // 실제 이미지보다 작은 판정
+    coyoteTime: 100,            // ms of forgiveness
+    iframes: 500                // Invincibility after hit
+};
+
+// UI/HUD - Icon-based
+const HUD_DESIGN = {
+    hungerBar: {
+        type: 'circular',       // 원형 게이지
+        position: 'top-center',
+        size: 80
     },
-    gameplay_calm: {
-        file: 'music_calm.mp3',
-        tempo: 'medium',
-        mood: 'cheerful',
-        hungerThreshold: [0, 50]
+    score: {
+        type: 'icon',           // 아이콘 + 숫자
+        position: 'top-right'
     },
-    gameplay_tense: {
-        file: 'music_tense.mp3',
-        tempo: 'fast',
-        mood: 'urgent',
-        hungerThreshold: [50, 80]
+    feverGauge: {
+        type: 'vertical-bar',
+        position: 'right-edge',
+        width: 20
     },
-    gameplay_critical: {
-        file: 'music_critical.mp3',
-        tempo: 'very_fast',
-        mood: 'panic',
-        hungerThreshold: [80, 100]
-    },
-    boss: {
-        file: 'music_boss.mp3',
-        tempo: 'epic',
-        mood: 'challenging'
-    },
-    victory: {
-        file: 'music_victory.mp3',
-        tempo: 'triumphant',
-        mood: 'celebration'
+    combo: {
+        type: 'popup',          // 화면 중앙 팝업
+        animation: 'bounce'
     }
 };
 ```
 
-### 4.3 Audio Implementation
+---
 
-```javascript
-class AudioManager {
-    constructor() {
-        this.sounds = {};
-        this.music = null;
-        this.musicVolume = 0.5;
-        this.sfxVolume = 0.7;
-        this.muted = false;
-    }
+## Part 2: Technical Implementation
 
-    crossfadeMusic(newTrack, duration = 1000) {
-        // Smooth transition between music tracks
-    }
+### 2.1 Responsive Design (Mobile First)
 
-    playSound(key, options = {}) {
-        // With pooling for rapid repeated sounds
+```css
+/* Portrait Container (9:16) */
+#game-container {
+    width: 100%;
+    height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    aspect-ratio: 9 / 16;
+    overflow: hidden;
+    touch-action: none;
+    position: relative;
+}
+
+/* Canvas fills container */
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Desktop fallback - centered with pillarbox */
+@media (min-aspect-ratio: 9/16) {
+    #game-container {
+        height: 100vh;
+        width: auto;
     }
+}
+
+/* Prevent zoom on double-tap */
+* {
+    touch-action: manipulation;
 }
 ```
 
----
-
-## Part 5: Progression & Retention Systems
-
-### 5.1 Achievement System
+### 2.2 Game Constants (Vertical Layout)
 
 ```javascript
-const ACHIEVEMENTS = {
-    // Beginner
-    first_feed: { name: 'First Meal', desc: 'Feed Caiso for the first time', reward: 50 },
-    first_combo: { name: 'Combo Starter', desc: 'Get a 3x combo', reward: 100 },
-    first_win: { name: 'Village Hero', desc: 'Complete your first game', reward: 200 },
+// New dimensions for 9:16
+const GAME_CONFIG = {
+    // Canvas dimensions (internal)
+    WIDTH: 480,
+    HEIGHT: 854,
 
-    // Intermediate
-    combo_master: { name: 'Combo Master', desc: 'Reach 10x combo', reward: 500 },
-    speed_demon: { name: 'Speed Demon', desc: 'Win in under 60 seconds', reward: 750 },
-    no_loss: { name: 'Perfect Protector', desc: 'Win without losing any villagers', reward: 1000 },
+    // Zones
+    HUD_HEIGHT: 60,
+    CONTROL_HEIGHT: 120,
+    ACTION_HEIGHT: 674,  // 854 - 60 - 120
 
-    // Advanced
-    level_50: { name: 'Halfway Hero', desc: 'Reach level 50', reward: 1500 },
-    level_100: { name: 'Master Feeder', desc: 'Reach level 100', reward: 5000 },
-    all_foods: { name: 'Full Menu', desc: 'Unlock all food types', reward: 2000 },
+    // Positions
+    CAISO_Y: 200,        // Upper portion
+    VILLAGER_SPAWN_Y: 700,
+    PLAYER_Y: 750,
 
-    // Secret
-    golden_save: { name: 'Golden Guardian', desc: 'Save 10 golden villagers', reward: 3000 },
-    boss_slayer: { name: 'Boss Slayer', desc: 'Complete all boss levels', reward: 10000 }
+    // Gameplay
+    VILLAGER_CONSUME_INTERVAL: 2000,
+    COMBO_TIMEOUT: 1500,
+    FEVER_CHARGE_MAX: 100
 };
 ```
 
-### 5.2 Currency & Shop System
+### 2.3 Virtual Joystick Implementation
 
 ```javascript
-const SHOP_ITEMS = {
-    // Cosmetics
-    caiso_hat_chef: { name: 'Chef Hat', cost: 500, type: 'cosmetic' },
-    caiso_hat_crown: { name: 'Royal Crown', cost: 2000, type: 'cosmetic' },
-    caiso_skin_blue: { name: 'Blue Caiso', cost: 1000, type: 'skin' },
-    caiso_skin_golden: { name: 'Golden Caiso', cost: 5000, type: 'skin' },
+class VirtualJoystick {
+    constructor(options) {
+        this.zone = options.zone || document.body;
+        this.size = options.size || 100;
+        this.threshold = options.threshold || 0.1;
 
-    // Upgrades (permanent)
-    energy_max_up: { name: 'Energy Tank', cost: 1500, effect: '+5 max energy' },
-    combo_time_up: { name: 'Combo Extender', cost: 2000, effect: '+0.5s combo window' },
-    starting_food: { name: 'Better Start', cost: 3000, effect: 'Start with sandwich unlocked' }
-};
-```
+        this.active = false;
+        this.origin = { x: 0, y: 0 };
+        this.position = { x: 0, y: 0 };
+        this.direction = { x: 0, y: 0 };
 
-### 5.3 Daily Challenges
-
-```javascript
-const DAILY_CHALLENGES = [
-    { type: 'reach_combo', target: 15, reward: 200, desc: 'Reach 15x combo' },
-    { type: 'save_villagers', target: 95, reward: 300, desc: 'Save 95+ villagers' },
-    { type: 'use_food', food: 'apple', count: 50, reward: 150, desc: 'Feed 50 apples' },
-    { type: 'win_fast', time: 45, reward: 500, desc: 'Win in under 45 seconds' },
-    { type: 'no_powerups', reward: 400, desc: 'Win without using power-ups' }
-];
-```
-
-### 5.4 Local Storage Save System
-
-```javascript
-const SAVE_DATA_STRUCTURE = {
-    version: 2,
-    player: {
-        currency: 0,
-        highScore: 0,
-        maxLevel: 1,
-        totalGamesPlayed: 0,
-        totalVillagersSaved: 0,
-        totalFoodFed: 0
-    },
-    achievements: [],
-    unlockedCosmetics: [],
-    equippedCosmetic: null,
-    upgrades: [],
-    settings: {
-        musicVolume: 0.5,
-        sfxVolume: 0.7,
-        muted: false
-    },
-    dailyChallenge: {
-        date: null,
-        progress: {},
-        completed: false
+        this.setupListeners();
     }
-};
-```
 
----
+    setupListeners() {
+        this.zone.addEventListener('touchstart', (e) => this.onStart(e));
+        this.zone.addEventListener('touchmove', (e) => this.onMove(e));
+        this.zone.addEventListener('touchend', (e) => this.onEnd(e));
 
-## Part 6: UI/UX Improvements
-
-### 6.1 Main Menu Redesign
-
-```
-┌─────────────────────────────────────────────┐
-│                                             │
-│        [Animated Caiso Character]           │
-│                                             │
-│         ★ FEEDING CAISO ★                   │
-│         Save the Villagers!                 │
-│                                             │
-│     ┌─────────────────────────┐             │
-│     │       ▶ PLAY            │             │
-│     └─────────────────────────┘             │
-│                                             │
-│     [Shop]    [Achievements]    [Settings]  │
-│                                             │
-│     High Score: 12,450    Level: 47         │
-│                                             │
-│                        🔊 Music  🔈 SFX     │
-└─────────────────────────────────────────────┘
-```
-
-### 6.2 In-Game HUD Redesign
-
-```
-┌─────────────────────────────────────────────┐
-│ [🍎 x5] [🍔 --] [🍕 3s]     LVL 12    ⚡ 15/20│
-│ ┌─────────────────────────────────────────┐ │
-│ │█████████████████████░░░░░ HUNGER: 72%  │ │
-│ └─────────────────────────────────────────┘ │
-│                                             │
-│                [GAME AREA]                  │
-│                                             │
-│    [COMBO: 5x]                              │
-│                                             │
-│ ┌─────────┐                                 │
-│ │ 👥 87   │    ════════════▓▓▓  [2.0s]    │
-│ │VILLAGERS│                                 │
-│ └─────────┘                                 │
-└─────────────────────────────────────────────┘
-```
-
-### 6.3 Touch Control Improvements
-
-```javascript
-const TOUCH_ZONES = {
-    feedButton: {
-        position: 'bottom-center',
-        size: 'large',
-        feedback: 'haptic'
-    },
-    foodSelector: {
-        position: 'bottom-left',
-        layout: 'horizontal-scroll',
-        quickSelect: true
-    },
-    pauseButton: {
-        position: 'top-right',
-        size: 'small'
+        // Mouse fallback for desktop testing
+        this.zone.addEventListener('mousedown', (e) => this.onStart(e));
+        this.zone.addEventListener('mousemove', (e) => this.onMove(e));
+        this.zone.addEventListener('mouseup', (e) => this.onEnd(e));
     }
-};
-```
 
-### 6.4 Accessibility Features
+    onStart(e) {
+        const point = e.touches ? e.touches[0] : e;
+        const rect = this.zone.getBoundingClientRect();
+        const y = point.clientY - rect.top;
 
-```javascript
-const ACCESSIBILITY = {
-    colorBlindMode: {
-        patterns: true,          // Add patterns to colored elements
-        labels: true             // Text labels on all icons
-    },
-    screenReader: {
-        announceCombo: true,
-        announceHunger: true,
-        announceVillagers: true
-    },
-    reducedMotion: {
-        disableParticles: true,
-        simplifyAnimations: true
-    },
-    fontSize: {
-        options: ['normal', 'large', 'extra-large']
-    }
-};
-```
-
----
-
-## Part 7: Technical Implementation
-
-### 7.1 Performance Optimizations
-
-```javascript
-// Object pooling for particles
-class ParticlePool {
-    constructor(size = 100) {
-        this.pool = [];
-        for (let i = 0; i < size; i++) {
-            this.pool.push(new Particle());
+        // Only activate in bottom half
+        if (y > rect.height * 0.5) {
+            this.active = true;
+            this.origin.x = point.clientX - rect.left;
+            this.origin.y = y;
+            this.position.x = this.origin.x;
+            this.position.y = this.origin.y;
         }
     }
 
-    acquire() {
-        return this.pool.pop() || new Particle();
+    onMove(e) {
+        if (!this.active) return;
+        e.preventDefault();
+
+        const point = e.touches ? e.touches[0] : e;
+        const rect = this.zone.getBoundingClientRect();
+
+        this.position.x = point.clientX - rect.left;
+        this.position.y = point.clientY - rect.top;
+
+        // Calculate direction
+        const dx = this.position.x - this.origin.x;
+        const dy = this.position.y - this.origin.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const maxDistance = this.size / 2;
+
+        if (distance > this.threshold * maxDistance) {
+            this.direction.x = Math.min(1, dx / maxDistance);
+            this.direction.y = Math.min(1, dy / maxDistance);
+        } else {
+            this.direction.x = 0;
+            this.direction.y = 0;
+        }
     }
 
-    release(particle) {
-        particle.reset();
-        this.pool.push(particle);
+    onEnd(e) {
+        this.active = false;
+        this.direction.x = 0;
+        this.direction.y = 0;
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+
+        // Outer ring
+        ctx.beginPath();
+        ctx.arc(this.origin.x, this.origin.y, this.size / 2, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Inner stick
+        const stickX = this.origin.x + this.direction.x * (this.size / 3);
+        const stickY = this.origin.y + this.direction.y * (this.size / 3);
+
+        ctx.beginPath();
+        ctx.arc(stickX, stickY, this.size / 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fill();
+    }
+}
+```
+
+### 2.4 Parallax Background System
+
+```javascript
+class ParallaxBackground {
+    constructor(layers) {
+        this.layers = layers.map(layer => ({
+            ...layer,
+            offset: 0
+        }));
+    }
+
+    update(playerVelocity, deltaTime) {
+        this.layers.forEach(layer => {
+            // Move opposite to player direction
+            layer.offset -= playerVelocity.x * layer.speed * deltaTime * 0.01;
+
+            // Wrap around
+            if (layer.offset > layer.width) layer.offset = 0;
+            if (layer.offset < 0) layer.offset = layer.width;
+        });
+    }
+
+    draw(ctx, canvasWidth, canvasHeight) {
+        this.layers.forEach(layer => {
+            const img = layer.image;
+            if (!img) return;
+
+            // Draw twice for seamless scrolling
+            ctx.drawImage(img, layer.offset, layer.y, layer.width, layer.height);
+            ctx.drawImage(img, layer.offset - layer.width, layer.y, layer.width, layer.height);
+        });
     }
 }
 
-// Canvas layer separation
-const CANVAS_LAYERS = {
-    background: { zIndex: 0, static: true },
-    gameObjects: { zIndex: 1, dynamic: true },
-    particles: { zIndex: 2, dynamic: true },
-    ui: { zIndex: 3, semi-static: true }
-};
+// Layer configuration
+const PARALLAX_LAYERS = [
+    { name: 'sky', speed: 0, y: 0, height: 300 },
+    { name: 'clouds', speed: 0.1, y: 50, height: 150 },
+    { name: 'mountains', speed: 0.3, y: 200, height: 200 },
+    { name: 'village', speed: 0.5, y: 350, height: 250 },
+    { name: 'ground', speed: 1.0, y: 550, height: 304 }
+];
 ```
 
-### 7.2 Asset Loading System
+### 2.5 Squash & Stretch Animation System
 
 ```javascript
-class AssetManager {
-    constructor() {
-        this.images = {};
-        this.sounds = {};
-        this.loadProgress = 0;
+class SquashStretch {
+    constructor(entity) {
+        this.entity = entity;
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.targetScaleX = 1;
+        this.targetScaleY = 1;
+        this.animating = false;
     }
 
-    async loadAll() {
-        const manifest = await fetch('assets/manifest.json');
-        const assets = await manifest.json();
+    // Apply effect based on velocity
+    applyMovement(velocityX, velocityY) {
+        const speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+        const stretchFactor = Math.min(speed / 10, 0.3);
 
-        const total = assets.images.length + assets.sounds.length;
-        let loaded = 0;
+        if (speed > 0.5) {
+            // Stretch in movement direction
+            const angle = Math.atan2(velocityY, velocityX);
+            this.targetScaleX = 1 + stretchFactor * Math.abs(Math.cos(angle));
+            this.targetScaleY = 1 - stretchFactor * 0.5;
+        } else {
+            // Return to normal with overshoot (jelly effect)
+            this.targetScaleX = 1;
+            this.targetScaleY = 1;
+        }
+    }
 
-        const updateProgress = () => {
-            loaded++;
-            this.loadProgress = loaded / total;
-            this.onProgress?.(this.loadProgress);
+    // Trigger eating animation
+    triggerEat() {
+        this.scaleX = 1.3;
+        this.scaleY = 0.7;
+        this.targetScaleX = 1;
+        this.targetScaleY = 1;
+    }
+
+    // Trigger bounce on wall
+    triggerBounce() {
+        this.scaleX = 0.7;
+        this.scaleY = 1.4;
+        this.targetScaleX = 1;
+        this.targetScaleY = 1;
+    }
+
+    update(deltaTime) {
+        const lerp = 0.15;
+        this.scaleX += (this.targetScaleX - this.scaleX) * lerp;
+        this.scaleY += (this.targetScaleY - this.scaleY) * lerp;
+    }
+
+    getTransform() {
+        return { scaleX: this.scaleX, scaleY: this.scaleY };
+    }
+}
+```
+
+### 2.6 Fever Mode Implementation
+
+```javascript
+class FeverMode {
+    constructor(game) {
+        this.game = game;
+        this.gauge = 0;
+        this.maxGauge = 100;
+        this.active = false;
+        this.duration = 5000;
+        this.timer = 0;
+
+        // Visual effects
+        this.screenFlash = 0;
+        this.particles = [];
+    }
+
+    charge(amount) {
+        if (this.active) return;
+        this.gauge = Math.min(this.maxGauge, this.gauge + amount);
+
+        if (this.gauge >= this.maxGauge) {
+            this.activate();
+        }
+    }
+
+    activate() {
+        this.active = true;
+        this.timer = this.duration;
+        this.screenFlash = 1;
+
+        // Spawn burst particles
+        for (let i = 0; i < 50; i++) {
+            this.particles.push(this.createFeverParticle());
+        }
+
+        // Play fever sound
+        // this.game.audio.play('fever_start');
+    }
+
+    update(deltaTime) {
+        if (this.active) {
+            this.timer -= deltaTime;
+
+            if (this.timer <= 0) {
+                this.deactivate();
+            }
+
+            // Continuous particle emission
+            if (Math.random() < 0.3) {
+                this.particles.push(this.createFeverParticle());
+            }
+        }
+
+        // Update particles
+        this.particles = this.particles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= deltaTime;
+            p.size *= 0.98;
+            return p.life > 0;
+        });
+
+        // Fade screen flash
+        if (this.screenFlash > 0) {
+            this.screenFlash -= deltaTime * 0.003;
+        }
+    }
+
+    deactivate() {
+        this.active = false;
+        this.gauge = 0;
+    }
+
+    createFeverParticle() {
+        const colors = ['#ff006e', '#fb5607', '#ffbe0b', '#8338ec'];
+        return {
+            x: Math.random() * this.game.width,
+            y: Math.random() * this.game.height,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            size: Math.random() * 15 + 5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            life: 800
         };
-
-        await Promise.all([
-            ...assets.images.map(img => this.loadImage(img).then(updateProgress)),
-            ...assets.sounds.map(snd => this.loadSound(snd).then(updateProgress))
-        ]);
-    }
-}
-```
-
-### 7.3 State Machine
-
-```javascript
-const GAME_STATES = {
-    LOADING: 'loading',
-    MENU: 'menu',
-    PLAYING: 'playing',
-    PAUSED: 'paused',
-    BOSS: 'boss',
-    EVENT: 'event',
-    VICTORY: 'victory',
-    GAME_OVER: 'gameover',
-    SHOP: 'shop',
-    ACHIEVEMENTS: 'achievements'
-};
-
-class GameStateMachine {
-    constructor() {
-        this.currentState = GAME_STATES.LOADING;
-        this.previousState = null;
-        this.stateData = {};
     }
 
-    transition(newState, data = {}) {
-        this.previousState = this.currentState;
-        this.currentState = newState;
-        this.stateData = data;
-        this.onStateChange?.(this.previousState, newState);
+    draw(ctx) {
+        // Screen flash effect
+        if (this.screenFlash > 0) {
+            ctx.fillStyle = `rgba(255, 0, 110, ${this.screenFlash * 0.3})`;
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
+
+        // Draw particles
+        this.particles.forEach(p => {
+            ctx.globalAlpha = p.life / 800;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+
+        // Fever gauge UI
+        this.drawGauge(ctx);
+    }
+
+    drawGauge(ctx) {
+        const x = ctx.canvas.width - 30;
+        const y = 80;
+        const height = 200;
+        const width = 20;
+
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(x, y, width, height);
+
+        // Fill
+        const fillHeight = (this.gauge / this.maxGauge) * height;
+        const gradient = ctx.createLinearGradient(x, y + height, x, y);
+        gradient.addColorStop(0, '#ff006e');
+        gradient.addColorStop(0.5, '#fb5607');
+        gradient.addColorStop(1, '#ffbe0b');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y + height - fillHeight, width, fillHeight);
+
+        // Border
+        ctx.strokeStyle = this.active ? '#fff' : 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+
+        // "FEVER" text when active
+        if (this.active) {
+            ctx.save();
+            ctx.translate(x + width / 2, y + height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Fredoka One';
+            ctx.textAlign = 'center';
+            ctx.fillText('FEVER!', 0, 5);
+            ctx.restore();
+        }
+    }
+
+    getMultiplier() {
+        return this.active ? 3 : 1;
+    }
+
+    isMagnetActive() {
+        return this.active;
     }
 }
 ```
 
 ---
 
-## Part 8: Development Phases
+## Part 3: Visual Assets Generation
 
-### Phase 2.1: Core Gameplay (Week 1-2)
-- [ ] Implement dynamic hunger system (increases over time)
-- [ ] Add energy system for food
-- [ ] Implement food cooldowns
-- [ ] Balance testing
+### 3.1 Art Style Direction
 
-### Phase 2.2: Visual Overhaul (Week 2-3)
-- [ ] Generate new Caiso sprites with Image Generator API
-- [ ] Generate villager sprites
-- [ ] Generate food icons
-- [ ] Create new backgrounds
-- [ ] Implement sprite animation system
-- [ ] Add parallax background
+**Target Style**: Neon Cyberpunk meets Cute Cartoon
+- Glowing outlines on dark backgrounds
+- Vibrant neon colors
+- Soft, rounded character designs
+- Particle-heavy effects
 
-### Phase 2.3: Audio Integration (Week 3-4)
-- [ ] Find/create sound effects (royalty-free)
-- [ ] Find/create background music
-- [ ] Implement AudioManager
-- [ ] Add dynamic music transitions
-
-### Phase 2.4: Special Features (Week 4-5)
-- [ ] Implement power-up system
-- [ ] Create special events
-- [ ] Design and implement boss levels
-- [ ] Add event triggers
-
-### Phase 2.5: Progression Systems (Week 5-6)
-- [ ] Implement LocalStorage save system
-- [ ] Create achievement system
-- [ ] Add currency/shop (cosmetics only)
-- [ ] Implement daily challenges
-
-### Phase 2.6: Polish & Testing (Week 6-7)
-- [ ] UI/UX refinements
-- [ ] Mobile optimization
-- [ ] Accessibility features
-- [ ] Performance optimization
-- [ ] Bug fixing
-- [ ] Balance adjustments
-
----
-
-## Part 9: Asset Generation Prompts
-
-### 9.1 Caiso Character Prompts
-
-```bash
-# Idle State
-python scripts/generate_asset.py sprite \
-  "cute cartoon purple monster, round body, big friendly eyes, small horns on head, slightly open mouth, happy expression, simple flat shading, mobile game style, facing forward" \
-  caiso_idle --size 256x256 --output games/feeding-caiso/assets/sprites/
-
-# Eating State
-python scripts/generate_asset.py sprite \
-  "cute cartoon purple monster, round body, eyes closed with happiness, mouth wide open eating, crumbs flying, excited expression, flat shading, mobile game style" \
-  caiso_eating --size 256x256 --output games/feeding-caiso/assets/sprites/
-
-# Hungry State
-python scripts/generate_asset.py sprite \
-  "cute cartoon purple monster, round body, big pleading eyes, drooling, hungry desperate expression, flat shading, mobile game style" \
-  caiso_hungry --size 256x256 --output games/feeding-caiso/assets/sprites/
-
-# Sad State
-python scripts/generate_asset.py sprite \
-  "cute cartoon purple monster, round body, teary eyes, sad frown, droopy posture, apologetic expression, flat shading, mobile game style" \
-  caiso_sad --size 256x256 --output games/feeding-caiso/assets/sprites/
-
-# Happy State
-python scripts/generate_asset.py sprite \
-  "cute cartoon purple monster, round body, closed happy eyes, big smile, sparkles around, celebrating, flat shading, mobile game style" \
-  caiso_happy --size 256x256 --output games/feeding-caiso/assets/sprites/
+**Color Palette**:
+```
+Primary (Caiso): #9b59b6, #8e44ad, #6c3483
+Neon Accent: #00d4ff, #ff006e, #ffbe0b
+Dark Background: #1a1a2e, #16213e, #0f3460
+Glow Effects: #00fff0, #ff00ff, #ffd700
 ```
 
-### 9.2 Villager Prompts
+### 3.2 Sprite Generation Prompts (Image Generator API)
 
+#### Caiso Character Sprites
 ```bash
-# Normal Villager
+# Baby Caiso (Level 1-9)
 python scripts/generate_asset.py sprite \
-  "tiny cute chibi villager character, simple design, blue medieval clothes, worried expression, looking back, running pose, flat shading, mobile game style" \
-  villager_blue --size 64x64 --output games/feeding-caiso/assets/sprites/
+  "cute chibi purple monster, small round body, big sparkly eyes, tiny horns, happy expression, neon glow outline, cyberpunk style, transparent background" \
+  caiso_baby --size 128x128 --output games/feeding-caiso/assets/sprites/
 
-# Scared Villager
+# Young Caiso (Level 10-24)
 python scripts/generate_asset.py sprite \
-  "tiny cute chibi villager character, red clothes, terrified screaming expression, arms up in panic, sweat drops, running away, flat shading, mobile game style" \
-  villager_scared --size 64x64 --output games/feeding-caiso/assets/sprites/
+  "cute cartoon purple monster, medium round body, friendly eyes, small horns, slightly open mouth, soft neon glow, cyberpunk cute style, transparent background" \
+  caiso_young --size 192x192 --output games/feeding-caiso/assets/sprites/
 
-# Golden Villager
+# Adult Caiso (Level 25-49) - Multiple expressions
 python scripts/generate_asset.py sprite \
-  "tiny cute chibi villager character, golden glowing outfit, special sparkle effects, royal appearance, worried but brave expression, flat shading, mobile game style" \
-  villager_golden --size 64x64 --output games/feeding-caiso/assets/sprites/
+  "cartoon purple monster, round body, big eyes, horns on head, mouth wide open hungry, drooling, neon purple glow, cyberpunk style, transparent background" \
+  caiso_adult_hungry --size 256x256 --output games/feeding-caiso/assets/sprites/
+
+python scripts/generate_asset.py sprite \
+  "cartoon purple monster, round body, closed happy eyes, big smile, sparkles, neon purple glow, cyberpunk style, transparent background" \
+  caiso_adult_happy --size 256x256 --output games/feeding-caiso/assets/sprites/
+
+python scripts/generate_asset.py sprite \
+  "cartoon purple monster, round body, sad teary eyes, frown, neon purple dim glow, cyberpunk style, transparent background" \
+  caiso_adult_sad --size 256x256 --output games/feeding-caiso/assets/sprites/
+
+# Elder Caiso (Level 50-99)
+python scripts/generate_asset.py sprite \
+  "majestic cartoon purple monster, large round body, wise eyes, crown-like horns, regal pose, bright neon purple aura, cyberpunk style, transparent background" \
+  caiso_elder --size 320x320 --output games/feeding-caiso/assets/sprites/
+
+# Legendary Caiso (Level 100+)
+python scripts/generate_asset.py sprite \
+  "legendary cartoon purple monster, massive round body, golden crown, glowing eyes, rainbow neon aura, legendary effects, cyberpunk style, transparent background" \
+  caiso_legendary --size 384x384 --output games/feeding-caiso/assets/sprites/
 ```
 
-### 9.3 Food Item Prompts
-
+#### Food Items
 ```bash
-# Apple
+# Apple (neon style)
 python scripts/generate_asset.py sprite \
-  "cartoon shiny red apple, game icon style, simple, cute, delicious looking, small leaf on top, glossy highlight, flat shading" \
+  "cartoon apple, shiny red, neon glow outline, cyberpunk game item style, simple design, transparent background" \
   food_apple --size 64x64 --output games/feeding-caiso/assets/sprites/
 
-# Burger
+# Burger (neon style)
 python scripts/generate_asset.py sprite \
-  "cartoon delicious burger, sesame seed bun, lettuce tomato cheese patty, game icon style, simple, appetizing, flat shading" \
+  "cartoon burger, colorful layers, neon glow outline, cyberpunk game item style, delicious looking, transparent background" \
   food_burger --size 64x64 --output games/feeding-caiso/assets/sprites/
 
-# Pizza
+# Pizza (neon style)
 python scripts/generate_asset.py sprite \
-  "cartoon pizza slice, pepperoni and cheese, game icon style, simple, delicious looking, melted cheese, flat shading" \
+  "cartoon pizza slice, pepperoni cheese, neon glow outline, cyberpunk game item style, transparent background" \
   food_pizza --size 64x64 --output games/feeding-caiso/assets/sprites/
 
-# Golden Apple
+# Golden Apple (special)
 python scripts/generate_asset.py sprite \
-  "magical golden apple, glowing aura, sparkles, game icon style, legendary item appearance, flat shading, precious looking" \
+  "magical golden apple, glowing aura, sparkles, legendary game item, neon gold glow, cyberpunk style, transparent background" \
   food_golden_apple --size 64x64 --output games/feeding-caiso/assets/sprites/
 
-# Royal Feast
+# Fever Food (rainbow)
 python scripts/generate_asset.py sprite \
-  "cartoon royal feast platter, turkey leg, fruits, goblet, golden plate, game icon style, luxurious food, flat shading" \
-  food_feast --size 64x64 --output games/feeding-caiso/assets/sprites/
+  "magical rainbow food item, spinning, sparkles all around, legendary game item, rainbow neon glow, transparent background" \
+  food_fever --size 64x64 --output games/feeding-caiso/assets/sprites/
 ```
 
-### 9.4 Background Prompts
-
+#### Backgrounds (Parallax Layers)
 ```bash
-# Village Day
+# Sky layer (deep blue/purple gradient)
 python scripts/generate_asset.py background \
-  "cartoon medieval village background, sunny day, cute cottages, green hills, blue sky with fluffy clouds, cobblestone path, game background style, bright cheerful colors, no characters" \
-  bg_village_day --size 1920x1200 --output games/feeding-caiso/assets/backgrounds/
+  "cyberpunk night sky, deep blue purple gradient, stars, no moon, simple, game background, tileable" \
+  bg_sky --size 480x300 --output games/feeding-caiso/assets/backgrounds/
 
-# Village Night
+# Clouds layer
 python scripts/generate_asset.py background \
-  "cartoon medieval village background, night time, stars and moon, cottage windows glowing, dark blue sky, peaceful atmosphere, game background style, no characters" \
-  bg_village_night --size 1920x1200 --output games/feeding-caiso/assets/backgrounds/
+  "neon glowing clouds, pink and cyan, cyberpunk style, game background layer, transparent areas, tileable" \
+  bg_clouds --size 960x150 --output games/feeding-caiso/assets/backgrounds/
 
-# Castle (Boss Level)
+# City/Village layer (silhouette)
 python scripts/generate_asset.py background \
-  "cartoon castle interior, grand hall, stone walls, torches, banners, medieval fantasy style, epic atmosphere, game background, no characters" \
-  bg_castle --size 1920x1200 --output games/feeding-caiso/assets/backgrounds/
+  "cyberpunk city silhouette, neon window lights, dark buildings, game background layer, tileable" \
+  bg_city --size 960x250 --output games/feeding-caiso/assets/backgrounds/
+
+# Ground layer
+python scripts/generate_asset.py background \
+  "cyberpunk street ground, neon grid lines, dark surface, game platform, tileable" \
+  bg_ground --size 960x300 --output games/feeding-caiso/assets/backgrounds/
+```
+
+#### UI Elements
+```bash
+# Feed button
+python scripts/generate_asset.py sprite \
+  "circular game button, neon purple glow, bite mark icon, cyberpunk style, transparent background" \
+  ui_feed_button --size 128x128 --output games/feeding-caiso/assets/ui/
+
+# Hunger gauge frame
+python scripts/generate_asset.py sprite \
+  "circular progress bar frame, neon style, cyberpunk, futuristic, transparent center, game UI" \
+  ui_hunger_frame --size 100x100 --output games/feeding-caiso/assets/ui/
 ```
 
 ---
 
-## Part 10: Success Metrics
+## Part 4: Gameplay Loop (Revised)
 
-### 10.1 Target KPIs
+### 4.1 Flow Diagram
 
-| Metric | Current | Phase 2 Target |
-|--------|---------|----------------|
-| Average Session Time | ~2 min | 8-10 min |
-| Return Rate (D1) | N/A | >40% |
-| Return Rate (D7) | N/A | >15% |
-| Games per Session | 1-2 | 3-5 |
-| Level Completion Rate | ~30% | >50% |
-| Achievement Unlock Rate | N/A | >20 avg |
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        TITLE SCREEN                         │
+│              "Tap to Play" (pulsing animation)              │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ Tap
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      GAMEPLAY LOOP                          │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 1. Player moves with joystick                       │   │
+│  │ 2. Tap FEED button to throw food                    │   │
+│  │ 3. Food reaches Caiso → Hunger decreases            │   │
+│  │ 4. Combo builds → Fever gauge charges               │   │
+│  │ 5. Villager timer ticks → Caiso eats villager       │   │
+│  │ 6. Level up → Caiso evolves                         │   │
+│  │ 7. Fever activated → FEVER TIME!                    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                          │                                  │
+│         ┌────────────────┼────────────────┐                │
+│         ▼                ▼                ▼                │
+│   [Hunger = 0%]   [Villagers = 0]   [Fever Mode]          │
+│         │                │                │                │
+│         ▼                ▼                ▼                │
+│      VICTORY          GAME OVER      5s MAYHEM             │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### 10.2 Quality Gates
+### 4.2 Input Mapping
 
-Before Phase 2 release, all must pass:
-- [ ] 60 FPS on mid-range mobile devices
-- [ ] < 3 second load time
-- [ ] < 2MB total asset size
-- [ ] All achievements attainable
-- [ ] No game-breaking bugs
-- [ ] Touch controls responsive
-- [ ] Audio properly balanced
+| Input | Action | Visual Feedback |
+|-------|--------|-----------------|
+| Touch bottom half + drag | Move player | Joystick appears, player moves |
+| Tap FEED button | Throw selected food | Button pulse, throw animation |
+| Swipe up (future) | Quick throw | Arc trajectory |
+| Double tap | Activate fever (if ready) | Screen flash, particles |
 
 ---
 
-## Appendix A: File Structure (Phase 2)
+## Part 5: Development Phases
+
+### Phase 2.1: Layout Refactoring (Day 1-2)
+- [ ] Change canvas aspect ratio to 9:16 (480x854)
+- [ ] Update CSS for mobile-first responsive design
+- [ ] Reposition all game elements for vertical layout
+- [ ] Add touch-action: none to prevent scrolling
+- [ ] Test on actual mobile devices
+
+### Phase 2.2: Input System (Day 2-3)
+- [ ] Implement VirtualJoystick class
+- [ ] Create large FEED button at bottom
+- [ ] Remove/deprecate keyboard controls (keep for debug)
+- [ ] Add haptic feedback for mobile
+- [ ] Test touch responsiveness
+
+### Phase 2.3: Visual Assets (Day 3-5)
+- [ ] Generate all Caiso evolution sprites
+- [ ] Generate food item sprites
+- [ ] Generate parallax background layers
+- [ ] Generate UI elements
+- [ ] Integrate assets into game
+
+### Phase 2.4: Animation Systems (Day 5-7)
+- [ ] Implement SquashStretch system
+- [ ] Add particle effects (eat, trail, fever)
+- [ ] Add screen shake on events
+- [ ] Add glow effects (CSS filter or canvas)
+- [ ] Implement parallax background scrolling
+
+### Phase 2.5: Fever Mode (Day 7-8)
+- [ ] Implement FeverMode class
+- [ ] Add fever gauge UI
+- [ ] Implement fever effects (speed, magnet, invincible)
+- [ ] Add fever particles and screen effects
+- [ ] Balance fever charge rate
+
+### Phase 2.6: Evolution System (Day 8-9)
+- [ ] Implement evolution tier checking
+- [ ] Add sprite swapping on evolution
+- [ ] Add scale changes
+- [ ] Add evolution celebration effects
+- [ ] Camera zoom adjustments
+
+### Phase 2.7: Polish & Balance (Day 9-10)
+- [ ] Fine-tune all animations
+- [ ] Balance difficulty curve
+- [ ] Add combo text popups
+- [ ] Performance optimization
+- [ ] Bug fixes and testing
+
+---
+
+## Part 6: Success Metrics
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Session Time | ~2 min | 5-8 min |
+| Fever Activations per Game | N/A | 3-5 |
+| Evolution Reached | N/A | Level 25+ average |
+| Mobile Touch Responsiveness | Basic | <16ms input lag |
+| Frame Rate | ~60fps | Stable 60fps |
+| Return Rate (D1) | N/A | >40% |
+
+---
+
+## Appendix A: File Structure
 
 ```
 games/feeding-caiso/
-├── index.html              # Main game file
+├── index.html              # Main game (single-file, updated)
 ├── docs/
 │   ├── PRD.md
 │   ├── TECHNICAL_DESIGN.md
-│   └── PHASE2_DEVELOPMENT.md  # This document
+│   ├── PHASE2_DEVELOPMENT.md    # This document
+│   ├── IMPLEMENTATION_GUIDE.md  # Step-by-step guide
+│   └── ASSET_CHECKLIST.md       # Asset generation tracker
 └── assets/
     ├── sprites/
-    │   ├── caiso_idle.png
-    │   ├── caiso_eating.png
-    │   ├── caiso_hungry.png
-    │   ├── caiso_sad.png
-    │   ├── caiso_happy.png
-    │   ├── villager_blue.png
-    │   ├── villager_scared.png
-    │   ├── villager_golden.png
-    │   ├── player_idle.png
-    │   ├── player_throwing.png
+    │   ├── caiso_baby.png
+    │   ├── caiso_young.png
+    │   ├── caiso_adult_hungry.png
+    │   ├── caiso_adult_happy.png
+    │   ├── caiso_adult_sad.png
+    │   ├── caiso_elder.png
+    │   ├── caiso_legendary.png
     │   ├── food_apple.png
     │   ├── food_burger.png
     │   ├── food_pizza.png
-    │   ├── food_feast.png
     │   ├── food_golden_apple.png
-    │   ├── powerup_speed.png
-    │   ├── powerup_double.png
-    │   ├── powerup_shield.png
-    │   └── ...
+    │   └── food_fever.png
     ├── backgrounds/
-    │   ├── bg_village_day.png
-    │   ├── bg_village_night.png
-    │   ├── bg_castle.png
-    │   └── ...
-    ├── ui/
-    │   ├── ui_hunger_bar.png
-    │   ├── ui_button_feed.png
-    │   ├── ui_panel.png
-    │   └── ...
-    └── audio/
-        ├── sfx/
-        │   ├── throw_whoosh.mp3
-        │   ├── eat_chomp.mp3
-        │   ├── combo_ding.mp3
-        │   └── ...
-        └── music/
-            ├── music_menu.mp3
-            ├── music_calm.mp3
-            ├── music_tense.mp3
-            └── ...
+    │   ├── bg_sky.png
+    │   ├── bg_clouds.png
+    │   ├── bg_city.png
+    │   └── bg_ground.png
+    └── ui/
+        ├── ui_feed_button.png
+        └── ui_hunger_frame.png
 ```
 
 ---
 
-## Appendix B: Recommended Libraries
-
-For future consideration (if moving beyond single-file):
-
-| Library | Purpose | Size |
-|---------|---------|------|
-| Howler.js | Audio management | 10KB |
-| anime.js | UI animations | 17KB |
-| localForage | Better localStorage | 10KB |
-
----
-
-*Document Version: 1.0*
+*Document Version: 2.0*
 *Last Updated: 2026-02-04*
-*Author: Game Design Team*
+*Vision: Mobile-First Hyper Casual Action*

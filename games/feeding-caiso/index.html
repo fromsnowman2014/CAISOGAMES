@@ -2,70 +2,112 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Feeding Caiso - Save the Villagers!</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            background: #0a0a1a;
+        }
+
         body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             font-family: 'Nunito', sans-serif;
-            overflow: hidden;
         }
+
+        /* Portrait Container (9:16) - Mobile First */
         #gameContainer {
             position: relative;
             width: 100%;
-            max-width: 900px;
-            aspect-ratio: 16/10;
+            height: 100%;
+            max-width: 480px;
+            max-height: 854px;
+            margin: 0 auto;
+            overflow: hidden;
+            touch-action: none;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
         }
+
+        /* Canvas fills container */
         #gameCanvas {
             width: 100%;
             height: 100%;
-            border-radius: 16px;
-            box-shadow: 0 0 60px rgba(108, 92, 231, 0.4);
+            display: block;
         }
+
+        /* Desktop fallback - centered with pillarbox */
+        @media (min-aspect-ratio: 9/16) {
+            #gameContainer {
+                height: 100vh;
+                width: calc(100vh * 9 / 16);
+                max-width: none;
+                max-height: none;
+                box-shadow: 0 0 60px rgba(108, 92, 231, 0.4);
+                border-radius: 16px;
+            }
+        }
+
+        /* Feed button - always visible on mobile */
         #touchFeedBtn {
             position: absolute;
-            bottom: 80px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 18px 50px;
-            font-size: 28px;
+            width: 100px;
+            height: 100px;
+            font-size: 22px;
             font-family: 'Fredoka One', cursive;
             background: linear-gradient(135deg, #6c5ce7, #a29bfe);
             color: white;
-            border: none;
-            border-radius: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
-            transition: transform 0.1s;
+            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.6), 0 0 30px rgba(108, 92, 231, 0.4);
             z-index: 100;
-            display: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-        #touchFeedBtn:active { transform: translateX(-50%) scale(0.95); }
-        @media (max-width: 768px) { #touchFeedBtn { display: block; } }
+
+        #touchFeedBtn:active {
+            transform: translateX(-50%) scale(0.9);
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.8);
+        }
+
         #loadingScreen {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: linear-gradient(135deg, #2d3436 0%, #1a1a2e 100%);
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            border-radius: 16px;
             z-index: 1000;
         }
+
         .loading-text {
             font-family: 'Fredoka One', cursive;
-            font-size: 36px;
+            font-size: 28px;
             color: #a29bfe;
             animation: pulse 1s infinite;
         }
+
         .loading-bar {
             width: 200px;
             height: 8px;
@@ -74,42 +116,47 @@
             margin-top: 20px;
             overflow: hidden;
         }
+
         .loading-fill {
             width: 0%;
             height: 100%;
             background: linear-gradient(90deg, #6c5ce7, #a29bfe);
             border-radius: 4px;
-            animation: load 1.5s ease-out forwards;
+            animation: load 2s ease-out forwards;
         }
+
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes load { to { width: 100%; } }
+
         #backBtn {
             position: absolute;
-            top: 15px;
-            left: 15px;
-            padding: 10px 20px;
-            font-size: 14px;
+            top: 10px;
+            left: 10px;
+            padding: 8px 14px;
+            font-size: 12px;
             font-family: 'Nunito', sans-serif;
             font-weight: 600;
             background: rgba(0, 0, 0, 0.6);
             color: #fff;
             border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 25px;
+            border-radius: 20px;
             cursor: pointer;
             transition: all 0.2s;
             z-index: 200;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            text-decoration: none;
         }
-        #backBtn:hover {
+
+        #backBtn:hover, #backBtn:active {
             background: rgba(108, 92, 231, 0.8);
             border-color: rgba(108, 92, 231, 1);
-            transform: scale(1.05);
         }
+
         #backBtn svg {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             fill: currentColor;
         }
     </style>
@@ -118,7 +165,7 @@
     <div id="gameContainer">
         <a href="../../" id="backBtn">
             <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            Back to Hub
+            Hub
         </a>
         <canvas id="gameCanvas"></canvas>
         <button id="touchFeedBtn">FEED!</button>
@@ -130,447 +177,576 @@
 
     <script>
     // ============================================
-    // FEEDING CAISO v2.0 - Enhanced Graphics
+    // FEEDING CAISO v3.0 - Phase 2: Mobile-First Vertical
     // ============================================
 
-    const GAME_WIDTH = 900;
-    const GAME_HEIGHT = 562;
-    const VILLAGER_CONSUME_INTERVAL = 2000;
-    const COMBO_TIMEOUT = 1500;
-
-    // ============================================
-    // SVG ASSETS - Embedded Graphics
-    // ============================================
-    const ASSETS = {
-        // Caiso Monster (facing left, mouth open)
-        caisoIdle: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220">
-            <defs>
-                <radialGradient id="bodyGrad" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" style="stop-color:#9b59b6"/>
-                    <stop offset="100%" style="stop-color:#6c3483"/>
-                </radialGradient>
-                <radialGradient id="bellyGrad" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" style="stop-color:#bb8fce"/>
-                    <stop offset="100%" style="stop-color:#9b59b6"/>
-                </radialGradient>
-            </defs>
-            <!-- Shadow -->
-            <ellipse cx="100" cy="210" rx="70" ry="15" fill="rgba(0,0,0,0.3)"/>
-            <!-- Body -->
-            <ellipse cx="100" cy="120" rx="85" ry="90" fill="url(#bodyGrad)"/>
-            <!-- Belly -->
-            <ellipse cx="100" cy="140" rx="50" ry="55" fill="url(#bellyGrad)"/>
-            <!-- Left Arm -->
-            <ellipse cx="20" cy="130" rx="25" ry="18" fill="#7d3c98" transform="rotate(-20 20 130)"/>
-            <!-- Right Arm -->
-            <ellipse cx="180" cy="130" rx="25" ry="18" fill="#7d3c98" transform="rotate(20 180 130)"/>
-            <!-- Left Leg -->
-            <ellipse cx="60" cy="200" rx="22" ry="15" fill="#6c3483"/>
-            <!-- Right Leg -->
-            <ellipse cx="140" cy="200" rx="22" ry="15" fill="#6c3483"/>
-            <!-- Mouth Background -->
-            <ellipse cx="100" cy="145" rx="45" ry="35" fill="#2c2c2c"/>
-            <!-- Tongue -->
-            <ellipse cx="100" cy="160" rx="28" ry="18" fill="#e74c3c"/>
-            <!-- Teeth Top -->
-            <path d="M60 120 L70 140 L80 120 L90 140 L100 120 L110 140 L120 120 L130 140 L140 120" fill="none" stroke="white" stroke-width="8" stroke-linecap="round"/>
-            <!-- Eyes -->
-            <ellipse cx="65" cy="70" rx="22" ry="26" fill="white"/>
-            <ellipse cx="135" cy="70" rx="22" ry="26" fill="white"/>
-            <!-- Pupils -->
-            <circle cx="60" cy="75" r="12" fill="#2c3e50"/>
-            <circle cx="130" cy="75" r="12" fill="#2c3e50"/>
-            <!-- Eye Shine -->
-            <circle cx="55" cy="68" r="5" fill="white"/>
-            <circle cx="125" cy="68" r="5" fill="white"/>
-            <!-- Eyebrows (hungry look) -->
-            <path d="M45 50 Q65 45 85 55" fill="none" stroke="#4a235a" stroke-width="4" stroke-linecap="round"/>
-            <path d="M115 55 Q135 45 155 50" fill="none" stroke="#4a235a" stroke-width="4" stroke-linecap="round"/>
-            <!-- Horns -->
-            <path d="M50 35 Q40 10 55 5 Q60 25 60 40" fill="#8e44ad"/>
-            <path d="M150 35 Q160 10 145 5 Q140 25 140 40" fill="#8e44ad"/>
-        </svg>`,
-
-        caisoEating: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220">
-            <defs>
-                <radialGradient id="bodyGrad2" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" style="stop-color:#9b59b6"/>
-                    <stop offset="100%" style="stop-color:#6c3483"/>
-                </radialGradient>
-            </defs>
-            <ellipse cx="100" cy="210" rx="70" ry="15" fill="rgba(0,0,0,0.3)"/>
-            <ellipse cx="100" cy="120" rx="85" ry="90" fill="url(#bodyGrad2)"/>
-            <ellipse cx="100" cy="140" rx="50" ry="55" fill="#bb8fce"/>
-            <ellipse cx="20" cy="120" rx="25" ry="18" fill="#7d3c98" transform="rotate(-30 20 120)"/>
-            <ellipse cx="180" cy="120" rx="25" ry="18" fill="#7d3c98" transform="rotate(30 180 120)"/>
-            <ellipse cx="60" cy="200" rx="22" ry="15" fill="#6c3483"/>
-            <ellipse cx="140" cy="200" rx="22" ry="15" fill="#6c3483"/>
-            <!-- WIDE OPEN MOUTH -->
-            <ellipse cx="100" cy="150" rx="55" ry="45" fill="#1a1a1a"/>
-            <ellipse cx="100" cy="170" rx="35" ry="22" fill="#c0392b"/>
-            <!-- Big Teeth -->
-            <path d="M50 115 L62 145 L74 115 L86 145 L98 115 L110 145 L122 115 L134 145 L146 115" fill="none" stroke="white" stroke-width="10" stroke-linecap="round"/>
-            <!-- Happy Closed Eyes -->
-            <path d="M45 70 Q65 55 85 70" fill="none" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
-            <path d="M115 70 Q135 55 155 70" fill="none" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
-            <!-- Blush -->
-            <ellipse cx="40" cy="95" rx="15" ry="8" fill="rgba(255,150,150,0.5)"/>
-            <ellipse cx="160" cy="95" rx="15" ry="8" fill="rgba(255,150,150,0.5)"/>
-            <!-- Horns -->
-            <path d="M50 35 Q40 10 55 5 Q60 25 60 40" fill="#8e44ad"/>
-            <path d="M150 35 Q160 10 145 5 Q140 25 140 40" fill="#8e44ad"/>
-        </svg>`,
-
-        caisoHappy: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220">
-            <defs>
-                <radialGradient id="bodyGrad3" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" style="stop-color:#a569bd"/>
-                    <stop offset="100%" style="stop-color:#7d3c98"/>
-                </radialGradient>
-            </defs>
-            <ellipse cx="100" cy="210" rx="70" ry="15" fill="rgba(0,0,0,0.3)"/>
-            <ellipse cx="100" cy="120" rx="85" ry="90" fill="url(#bodyGrad3)"/>
-            <ellipse cx="100" cy="140" rx="50" ry="55" fill="#d2b4de"/>
-            <ellipse cx="20" cy="130" rx="25" ry="18" fill="#7d3c98" transform="rotate(-10 20 130)"/>
-            <ellipse cx="180" cy="130" rx="25" ry="18" fill="#7d3c98" transform="rotate(10 180 130)"/>
-            <ellipse cx="60" cy="200" rx="22" ry="15" fill="#6c3483"/>
-            <ellipse cx="140" cy="200" rx="22" ry="15" fill="#6c3483"/>
-            <!-- Smile -->
-            <path d="M60 145 Q100 185 140 145" fill="#2c2c2c"/>
-            <path d="M70 145 Q100 170 130 145" fill="#e74c3c"/>
-            <!-- Happy Eyes -->
-            <path d="M45 70 Q65 50 85 70" fill="none" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
-            <path d="M115 70 Q135 50 155 70" fill="none" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
-            <!-- Big Blush -->
-            <ellipse cx="40" cy="100" rx="18" ry="10" fill="rgba(255,150,150,0.6)"/>
-            <ellipse cx="160" cy="100" rx="18" ry="10" fill="rgba(255,150,150,0.6)"/>
-            <!-- Horns -->
-            <path d="M50 35 Q40 10 55 5 Q60 25 60 40" fill="#8e44ad"/>
-            <path d="M150 35 Q160 10 145 5 Q140 25 140 40" fill="#8e44ad"/>
-            <!-- Sparkles -->
-            <text x="15" y="50" font-size="20">✨</text>
-            <text x="170" y="50" font-size="20">✨</text>
-        </svg>`,
-
-        caisoSad: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220">
-            <defs>
-                <radialGradient id="bodyGrad4" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" style="stop-color:#8e7cc3"/>
-                    <stop offset="100%" style="stop-color:#5b4a7a"/>
-                </radialGradient>
-            </defs>
-            <ellipse cx="100" cy="210" rx="70" ry="15" fill="rgba(0,0,0,0.3)"/>
-            <ellipse cx="100" cy="120" rx="85" ry="90" fill="url(#bodyGrad4)"/>
-            <ellipse cx="100" cy="140" rx="50" ry="55" fill="#b39ddb"/>
-            <ellipse cx="25" cy="140" rx="25" ry="18" fill="#6a5a8e" transform="rotate(10 25 140)"/>
-            <ellipse cx="175" cy="140" rx="25" ry="18" fill="#6a5a8e" transform="rotate(-10 175 140)"/>
-            <ellipse cx="60" cy="200" rx="22" ry="15" fill="#5b4a7a"/>
-            <ellipse cx="140" cy="200" rx="22" ry="15" fill="#5b4a7a"/>
-            <!-- Sad Mouth -->
-            <path d="M70 165 Q100 145 130 165" fill="none" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
-            <!-- Sad Eyes -->
-            <ellipse cx="65" cy="70" rx="22" ry="26" fill="white"/>
-            <ellipse cx="135" cy="70" rx="22" ry="26" fill="white"/>
-            <circle cx="65" cy="80" r="10" fill="#2c3e50"/>
-            <circle cx="135" cy="80" r="10" fill="#2c3e50"/>
-            <!-- Tears -->
-            <ellipse cx="45" cy="100" rx="6" ry="12" fill="#74b9ff"/>
-            <ellipse cx="155" cy="100" rx="6" ry="12" fill="#74b9ff"/>
-            <!-- Sad Eyebrows -->
-            <path d="M45 55 Q65 50 85 60" fill="none" stroke="#4a235a" stroke-width="4" stroke-linecap="round"/>
-            <path d="M115 60 Q135 50 155 55" fill="none" stroke="#4a235a" stroke-width="4" stroke-linecap="round"/>
-            <!-- Horns -->
-            <path d="M50 35 Q40 10 55 5 Q60 25 60 40" fill="#7a6a9a"/>
-            <path d="M150 35 Q160 10 145 5 Q140 25 140 40" fill="#7a6a9a"/>
-        </svg>`,
-
-        // Villager (walking backward - facing right, moving left)
-        villager: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 60">
-            <!-- Shadow -->
-            <ellipse cx="20" cy="58" rx="12" ry="4" fill="rgba(0,0,0,0.3)"/>
-            <!-- Body -->
-            <rect x="12" y="25" width="16" height="22" rx="3" fill="#3498db"/>
-            <!-- Head -->
-            <circle cx="20" cy="15" r="12" fill="#ffeaa7"/>
-            <!-- Hair -->
-            <ellipse cx="20" cy="8" rx="10" ry="6" fill="#6d4c41"/>
-            <!-- Eyes (looking back scared) -->
-            <circle cx="24" cy="14" r="3" fill="white"/>
-            <circle cx="25" cy="14" r="1.5" fill="#2c3e50"/>
-            <!-- Scared mouth -->
-            <ellipse cx="25" cy="20" rx="3" ry="2" fill="#e17055"/>
-            <!-- Arms (reaching forward - away from Caiso) -->
-            <rect x="2" y="28" width="12" height="5" rx="2" fill="#ffeaa7"/>
-            <!-- Legs -->
-            <rect x="13" y="45" width="5" height="12" rx="2" fill="#2c3e50"/>
-            <rect x="22" y="45" width="5" height="12" rx="2" fill="#2c3e50"/>
-        </svg>`,
-
-        villagerScared: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 60">
-            <ellipse cx="20" cy="58" rx="12" ry="4" fill="rgba(0,0,0,0.3)"/>
-            <rect x="12" y="25" width="16" height="22" rx="3" fill="#e74c3c"/>
-            <circle cx="20" cy="15" r="12" fill="#ffeaa7"/>
-            <ellipse cx="20" cy="8" rx="10" ry="6" fill="#6d4c41"/>
-            <!-- Big scared eyes -->
-            <circle cx="24" cy="13" r="4" fill="white"/>
-            <circle cx="25" cy="13" r="2" fill="#2c3e50"/>
-            <!-- Screaming mouth -->
-            <ellipse cx="25" cy="21" rx="4" ry="3" fill="#2c3e50"/>
-            <!-- Arms up in panic -->
-            <rect x="0" y="20" width="12" height="5" rx="2" fill="#ffeaa7" transform="rotate(-30 6 22)"/>
-            <rect x="28" y="20" width="12" height="5" rx="2" fill="#ffeaa7" transform="rotate(30 34 22)"/>
-            <rect x="13" y="45" width="5" height="12" rx="2" fill="#2c3e50"/>
-            <rect x="22" y="45" width="5" height="12" rx="2" fill="#2c3e50"/>
-            <!-- Sweat -->
-            <ellipse cx="10" cy="12" rx="2" ry="4" fill="#74b9ff"/>
-        </svg>`,
-
-        // Player (back view with basket)
-        player: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100">
-            <!-- Shadow -->
-            <ellipse cx="40" cy="98" rx="25" ry="6" fill="rgba(0,0,0,0.3)"/>
-            <!-- Legs -->
-            <rect x="22" y="65" width="12" height="30" rx="4" fill="#2c3e50"/>
-            <rect x="46" y="65" width="12" height="30" rx="4" fill="#2c3e50"/>
-            <!-- Body -->
-            <rect x="18" y="35" width="44" height="35" rx="6" fill="#e74c3c"/>
-            <!-- Cape/Back design -->
-            <rect x="22" y="38" width="36" height="28" rx="4" fill="#c0392b"/>
-            <!-- Head (back of head) -->
-            <circle cx="40" cy="22" r="18" fill="#ffeaa7"/>
-            <!-- Hair (back view) -->
-            <ellipse cx="40" cy="15" rx="16" ry="12" fill="#5d4037"/>
-            <rect x="24" y="15" width="32" height="12" rx="4" fill="#5d4037"/>
-            <!-- Ears -->
-            <ellipse cx="22" cy="22" rx="4" ry="6" fill="#ffeaa7"/>
-            <ellipse cx="58" cy="22" rx="4" ry="6" fill="#ffeaa7"/>
-            <!-- Basket -->
-            <ellipse cx="40" cy="75" rx="28" ry="12" fill="#8d6e63"/>
-            <ellipse cx="40" cy="72" rx="25" ry="10" fill="#a1887f"/>
-            <path d="M15 72 Q40 60 65 72" fill="none" stroke="#6d4c41" stroke-width="3"/>
-            <!-- Food in basket -->
-            <circle cx="32" cy="68" r="6" fill="#e74c3c"/>
-            <circle cx="45" cy="66" r="5" fill="#f39c12"/>
-            <circle cx="38" cy="70" r="4" fill="#27ae60"/>
-            <!-- Arms holding basket -->
-            <path d="M18 50 Q5 65 15 75" fill="none" stroke="#ffeaa7" stroke-width="10" stroke-linecap="round"/>
-            <path d="M62 50 Q75 65 65 75" fill="none" stroke="#ffeaa7" stroke-width="10" stroke-linecap="round"/>
-        </svg>`,
-
-        playerThrowing: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100">
-            <ellipse cx="40" cy="98" rx="25" ry="6" fill="rgba(0,0,0,0.3)"/>
-            <rect x="22" y="65" width="12" height="30" rx="4" fill="#2c3e50"/>
-            <rect x="46" y="65" width="12" height="30" rx="4" fill="#2c3e50"/>
-            <rect x="18" y="35" width="44" height="35" rx="6" fill="#e74c3c"/>
-            <rect x="22" y="38" width="36" height="28" rx="4" fill="#c0392b"/>
-            <circle cx="40" cy="22" r="18" fill="#ffeaa7"/>
-            <ellipse cx="40" cy="15" rx="16" ry="12" fill="#5d4037"/>
-            <rect x="24" y="15" width="32" height="12" rx="4" fill="#5d4037"/>
-            <ellipse cx="22" cy="22" rx="4" ry="6" fill="#ffeaa7"/>
-            <ellipse cx="58" cy="22" rx="4" ry="6" fill="#ffeaa7"/>
-            <!-- Basket (tilted) -->
-            <ellipse cx="35" cy="78" rx="25" ry="10" fill="#8d6e63" transform="rotate(-15 35 78)"/>
-            <ellipse cx="35" cy="75" rx="22" ry="8" fill="#a1887f" transform="rotate(-15 35 75)"/>
-            <!-- Right arm throwing up -->
-            <path d="M62 45 Q80 25 70 10" fill="none" stroke="#ffeaa7" stroke-width="10" stroke-linecap="round"/>
-            <!-- Left arm on basket -->
-            <path d="M18 50 Q5 65 20 78" fill="none" stroke="#ffeaa7" stroke-width="10" stroke-linecap="round"/>
-        </svg>`,
-
-        // Food Items
-        foodApple: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
-            <ellipse cx="20" cy="24" rx="14" ry="13" fill="#e74c3c"/>
-            <ellipse cx="15" cy="20" rx="4" ry="3" fill="#ff6b6b" opacity="0.6"/>
-            <path d="M20 8 Q22 4 26 6" fill="none" stroke="#27ae60" stroke-width="2"/>
-            <ellipse cx="24" cy="8" rx="4" ry="3" fill="#27ae60"/>
-            <rect x="19" y="10" width="3" height="6" rx="1" fill="#8b4513"/>
-        </svg>`,
-
-        foodBurger: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 40">
-            <!-- Top bun -->
-            <ellipse cx="25" cy="10" rx="22" ry="9" fill="#f39c12"/>
-            <ellipse cx="25" cy="9" rx="18" ry="6" fill="#f1c40f"/>
-            <!-- Sesame seeds -->
-            <ellipse cx="18" cy="7" rx="2" ry="1" fill="#fff5d6"/>
-            <ellipse cx="28" cy="5" rx="2" ry="1" fill="#fff5d6"/>
-            <ellipse cx="32" cy="8" rx="2" ry="1" fill="#fff5d6"/>
-            <!-- Lettuce -->
-            <path d="M5 16 Q10 12 15 16 Q20 12 25 16 Q30 12 35 16 Q40 12 45 16" fill="#27ae60"/>
-            <!-- Patty -->
-            <rect x="5" y="16" width="40" height="8" rx="2" fill="#7b4a2d"/>
-            <!-- Cheese -->
-            <path d="M3 24 L8 28 L15 24 L22 28 L29 24 L36 28 L43 24 L47 28 L47 24 L3 24" fill="#f39c12"/>
-            <!-- Bottom bun -->
-            <ellipse cx="25" cy="32" rx="22" ry="7" fill="#e67e22"/>
-        </svg>`,
-
-        foodPizza: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 40">
-            <!-- Pizza slice -->
-            <path d="M22 5 L5 38 L40 38 Z" fill="#f39c12"/>
-            <!-- Cheese -->
-            <path d="M22 10 L9 35 L36 35 Z" fill="#ffeaa7"/>
-            <!-- Pepperoni -->
-            <circle cx="18" cy="25" r="4" fill="#e74c3c"/>
-            <circle cx="28" cy="28" r="4" fill="#e74c3c"/>
-            <circle cx="22" cy="18" r="3" fill="#e74c3c"/>
-            <!-- Crust edge -->
-            <path d="M5 38 Q22 42 40 38" fill="none" stroke="#d68910" stroke-width="4" stroke-linecap="round"/>
-        </svg>`,
-
-        foodDorito: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
-            <!-- Chip -->
-            <path d="M20 5 L5 35 L35 35 Z" fill="#e67e22"/>
-            <path d="M20 8 L8 33 L32 33 Z" fill="#f39c12"/>
-            <!-- Flavor dust -->
-            <circle cx="15" cy="22" r="2" fill="#c0392b"/>
-            <circle cx="25" cy="25" r="2" fill="#c0392b"/>
-            <circle cx="20" cy="15" r="1.5" fill="#c0392b"/>
-            <circle cx="18" cy="28" r="1.5" fill="#c0392b"/>
-        </svg>`,
-
-        foodDynamite: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 50">
-            <!-- Dynamite stick -->
-            <rect x="12" y="15" width="16" height="30" rx="3" fill="#e74c3c"/>
-            <rect x="14" y="15" width="4" height="30" fill="#c0392b"/>
-            <!-- Label -->
-            <rect x="14" y="25" width="12" height="10" fill="#f5f5f5"/>
-            <text x="20" y="33" font-size="6" text-anchor="middle" fill="#c0392b" font-weight="bold">TNT</text>
-            <!-- Fuse -->
-            <path d="M20 15 Q25 10 20 5 Q15 0 20 -2" fill="none" stroke="#2c3e50" stroke-width="2"/>
-            <!-- Spark -->
-            <circle cx="20" cy="2" r="4" fill="#f39c12"/>
-            <circle cx="20" cy="2" r="2" fill="#fff"/>
-        </svg>`,
-
-        foodWatermelon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 40">
-            <!-- Watermelon slice -->
-            <path d="M5 35 Q25 5 45 35 Z" fill="#27ae60"/>
-            <path d="M8 35 Q25 10 42 35 Z" fill="#2ecc71"/>
-            <path d="M10 35 Q25 12 40 35 Z" fill="#ff6b6b"/>
-            <!-- Seeds -->
-            <ellipse cx="18" cy="28" rx="2" ry="3" fill="#2c3e50"/>
-            <ellipse cx="25" cy="22" rx="2" ry="3" fill="#2c3e50"/>
-            <ellipse cx="32" cy="28" rx="2" ry="3" fill="#2c3e50"/>
-            <ellipse cx="22" cy="30" rx="2" ry="3" fill="#2c3e50"/>
-            <ellipse cx="28" cy="30" rx="2" ry="3" fill="#2c3e50"/>
-        </svg>`
+    // Game Configuration - 9:16 Portrait
+    const GAME_CONFIG = {
+        WIDTH: 480,
+        HEIGHT: 854,
+        HUD_HEIGHT: 60,
+        CONTROL_HEIGHT: 140,
+        ACTION_HEIGHT: 654,
+        CAISO_Y: 180,
+        VILLAGER_SPAWN_Y: 650,
+        PLAYER_Y: 720,
+        VILLAGER_CONSUME_INTERVAL: 2500,
+        COMBO_TIMEOUT: 1500
     };
 
-    // Food definitions
+    // Evolution System
+    const EVOLUTION_TIERS = [
+        { level: 1, name: 'Baby Caiso', scale: 0.6, sprite: 'caiso_baby' },
+        { level: 10, name: 'Young Caiso', scale: 0.75, sprite: 'caiso_young' },
+        { level: 25, name: 'Adult Caiso', scale: 1.0, sprite: 'caiso_adult_hungry' },
+        { level: 50, name: 'Elder Caiso', scale: 1.2, sprite: 'caiso_elder' },
+        { level: 100, name: 'Legendary Caiso', scale: 1.4, sprite: 'caiso_legendary' }
+    ];
+
+    // Fever Mode Configuration
+    const FEVER_CONFIG = {
+        gaugeMax: 100,
+        chargeRate: 8,
+        comboBonus: 3,
+        duration: 5000,
+        speedMultiplier: 2,
+        magnetRange: 150,
+        scoreMultiplier: 3
+    };
+
+    // Food definitions with updated assets
     const FOODS = {
-        apple: { name: 'Apple', asset: 'foodApple', hungerReduction: 0.5, unlockLevel: 1, color: '#e74c3c', key: '1' },
-        dorito: { name: 'Dorito', asset: 'foodDorito', hungerReduction: 0.8, unlockLevel: 10, color: '#f39c12', key: '2' },
-        burger: { name: 'Burger', asset: 'foodBurger', hungerReduction: 1.5, unlockLevel: 20, color: '#e67e22', key: '3' },
-        dynamite: { name: 'Dynamite', asset: 'foodDynamite', hungerReduction: 5.0, unlockLevel: 30, color: '#e74c3c', key: '4' },
-        pizza: { name: 'Pizza', asset: 'foodPizza', hungerReduction: 2.5, unlockLevel: 50, color: '#f39c12', key: '5' },
-        watermelon: { name: 'Watermelon', asset: 'foodWatermelon', hungerReduction: 7.0, unlockLevel: 100, color: '#27ae60', key: '6' }
+        apple: { name: 'Apple', asset: 'food_apple', hungerReduction: 0.5, unlockLevel: 1, color: '#e74c3c', key: '1' },
+        dorito: { name: 'Dorito', asset: 'food_dorito', hungerReduction: 0.8, unlockLevel: 10, color: '#f39c12', key: '2' },
+        burger: { name: 'Burger', asset: 'food_burger', hungerReduction: 1.5, unlockLevel: 20, color: '#e67e22', key: '3' },
+        pizza: { name: 'Pizza', asset: 'food_pizza', hungerReduction: 2.5, unlockLevel: 30, color: '#f39c12', key: '4' },
+        golden: { name: 'Golden Apple', asset: 'food_golden_apple', hungerReduction: 5.0, unlockLevel: 50, color: '#ffd700', key: '5' },
+        fever: { name: 'Fever Food', asset: 'food_fever', hungerReduction: 10.0, unlockLevel: 75, color: '#ff006e', key: '6' }
     };
 
     // ============================================
-    // IMAGE LOADER
+    // PNG ASSET LOADER
     // ============================================
-    class ImageLoader {
+    class AssetLoader {
         constructor() {
             this.images = {};
             this.loaded = 0;
             this.total = 0;
+            this.basePath = 'assets/';
         }
 
-        loadAll(assets) {
-            return new Promise((resolve) => {
-                const keys = Object.keys(assets);
-                this.total = keys.length;
-                if (this.total === 0) { resolve(); return; }
+        async loadAll() {
+            const assets = {
+                // Caiso sprites
+                caiso_baby: 'sprites/caiso_baby_128x128.png',
+                caiso_young: 'sprites/caiso_young_192x192.png',
+                caiso_adult_hungry: 'sprites/caiso_adult_hungry_256x256.png',
+                caiso_adult_happy: 'sprites/caiso_adult_happy_256x256.png',
+                caiso_elder: 'sprites/caiso_elder_320x320.png',
+                caiso_legendary: 'sprites/caiso_legendary_384x384.png',
 
-                keys.forEach(key => {
+                // Food sprites
+                food_apple: 'sprites/food_apple_64x64.png',
+                food_burger: 'sprites/food_burger_64x64.png',
+                food_pizza: 'sprites/food_pizza_64x64.png',
+                food_dorito: 'sprites/food_dorito_64x64.png',
+                food_golden_apple: 'sprites/food_golden_apple_64x64.png',
+                food_fever: 'sprites/food_fever_64x64.png',
+
+                // Villager sprites
+                villager_normal: 'sprites/villager_normal_64x64.png',
+                villager_scared: 'sprites/villager_scared_64x64.png',
+                villager_golden: 'sprites/villager_golden_64x64.png',
+
+                // Player sprite
+                player_idle: 'sprites/player_idle_128x128.png',
+
+                // Background layers
+                bg_sky: 'backgrounds/bg_sky.png',
+                bg_clouds: 'backgrounds/bg_clouds.png',
+                bg_city: 'backgrounds/bg_city.png',
+                bg_ground: 'backgrounds/bg_ground.png',
+
+                // UI elements
+                ui_feed_button: 'ui/ui_feed_button_128x128.png',
+                ui_hunger_frame: 'ui/ui_hunger_frame_100x100.png',
+                ui_fever_bar: 'ui/ui_fever_bar_30x200.png'
+            };
+
+            const entries = Object.entries(assets);
+            this.total = entries.length;
+
+            const loadPromises = entries.map(([key, path]) => {
+                return new Promise((resolve) => {
                     const img = new Image();
-                    const svgBlob = new Blob([assets[key]], { type: 'image/svg+xml' });
-                    const url = URL.createObjectURL(svgBlob);
                     img.onload = () => {
                         this.images[key] = img;
                         this.loaded++;
-                        URL.revokeObjectURL(url);
-                        if (this.loaded >= this.total) resolve();
+                        resolve();
                     };
                     img.onerror = () => {
+                        console.warn(`Failed to load: ${path}`);
                         this.loaded++;
-                        if (this.loaded >= this.total) resolve();
+                        resolve();
                     };
-                    img.src = url;
+                    img.src = this.basePath + path;
                 });
+            });
+
+            await Promise.all(loadPromises);
+        }
+
+        get(key) {
+            return this.images[key];
+        }
+
+        getProgress() {
+            return this.total > 0 ? this.loaded / this.total : 0;
+        }
+    }
+
+    // ============================================
+    // VIRTUAL JOYSTICK
+    // ============================================
+    class VirtualJoystick {
+        constructor(zone) {
+            this.zone = zone;
+            this.size = 100;
+            this.threshold = 0.15;
+            this.active = false;
+            this.origin = { x: 0, y: 0 };
+            this.position = { x: 0, y: 0 };
+            this.direction = { x: 0, y: 0 };
+            this.setupListeners();
+        }
+
+        setupListeners() {
+            this.zone.addEventListener('touchstart', (e) => this.onStart(e), { passive: false });
+            this.zone.addEventListener('touchmove', (e) => this.onMove(e), { passive: false });
+            this.zone.addEventListener('touchend', (e) => this.onEnd(e));
+            this.zone.addEventListener('touchcancel', (e) => this.onEnd(e));
+
+            // Mouse fallback for desktop
+            this.zone.addEventListener('mousedown', (e) => this.onStart(e));
+            this.zone.addEventListener('mousemove', (e) => this.onMove(e));
+            this.zone.addEventListener('mouseup', (e) => this.onEnd(e));
+            this.zone.addEventListener('mouseleave', (e) => this.onEnd(e));
+        }
+
+        onStart(e) {
+            const point = e.touches ? e.touches[0] : e;
+            const rect = this.zone.getBoundingClientRect();
+            const y = point.clientY - rect.top;
+            const x = point.clientX - rect.left;
+
+            // Scale to canvas coordinates
+            const scaleX = GAME_CONFIG.WIDTH / rect.width;
+            const scaleY = GAME_CONFIG.HEIGHT / rect.height;
+
+            // Only activate in bottom portion (control area)
+            if (y > rect.height * 0.6) {
+                this.active = true;
+                this.origin.x = x * scaleX;
+                this.origin.y = y * scaleY;
+                this.position.x = this.origin.x;
+                this.position.y = this.origin.y;
+            }
+        }
+
+        onMove(e) {
+            if (!this.active) return;
+            e.preventDefault();
+
+            const point = e.touches ? e.touches[0] : e;
+            const rect = this.zone.getBoundingClientRect();
+            const scaleX = GAME_CONFIG.WIDTH / rect.width;
+            const scaleY = GAME_CONFIG.HEIGHT / rect.height;
+
+            this.position.x = (point.clientX - rect.left) * scaleX;
+            this.position.y = (point.clientY - rect.top) * scaleY;
+
+            const dx = this.position.x - this.origin.x;
+            const dy = this.position.y - this.origin.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDistance = this.size / 2;
+
+            if (distance > this.threshold * maxDistance) {
+                const normalized = Math.min(distance, maxDistance) / maxDistance;
+                this.direction.x = (dx / distance) * normalized;
+                this.direction.y = (dy / distance) * normalized;
+            } else {
+                this.direction.x = 0;
+                this.direction.y = 0;
+            }
+        }
+
+        onEnd(e) {
+            this.active = false;
+            this.direction.x = 0;
+            this.direction.y = 0;
+        }
+
+        draw(ctx) {
+            if (!this.active) return;
+
+            // Outer ring
+            ctx.beginPath();
+            ctx.arc(this.origin.x, this.origin.y, this.size / 2, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Inner stick
+            const stickX = this.origin.x + this.direction.x * (this.size / 2.5);
+            const stickY = this.origin.y + this.direction.y * (this.size / 2.5);
+
+            ctx.beginPath();
+            ctx.arc(stickX, stickY, this.size / 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(108, 92, 231, 0.7)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    }
+
+    // ============================================
+    // PARALLAX BACKGROUND
+    // ============================================
+    class ParallaxBackground {
+        constructor(assets) {
+            this.assets = assets;
+            this.layers = [
+                { key: 'bg_sky', speed: 0, y: 0, height: 300, offset: 0 },
+                { key: 'bg_clouds', speed: 0.15, y: 100, height: 150, offset: 0 },
+                { key: 'bg_city', speed: 0.3, y: 350, height: 250, offset: 0 },
+                { key: 'bg_ground', speed: 0.6, y: 550, height: 304, offset: 0 }
+            ];
+        }
+
+        update(playerVelocityX, deltaTime) {
+            this.layers.forEach(layer => {
+                layer.offset -= playerVelocityX * layer.speed * deltaTime * 0.02;
+                const img = this.assets.get(layer.key);
+                if (img) {
+                    const width = img.width || GAME_CONFIG.WIDTH * 2;
+                    if (layer.offset > width) layer.offset = 0;
+                    if (layer.offset < -width) layer.offset = 0;
+                }
             });
         }
 
-        get(key) { return this.images[key]; }
+        draw(ctx) {
+            this.layers.forEach(layer => {
+                const img = this.assets.get(layer.key);
+                if (img) {
+                    const width = img.width;
+                    const height = layer.height;
+
+                    // Draw twice for seamless scrolling
+                    ctx.drawImage(img, layer.offset, layer.y, width, height);
+                    ctx.drawImage(img, layer.offset + width, layer.y, width, height);
+                    ctx.drawImage(img, layer.offset - width, layer.y, width, height);
+                } else {
+                    // Fallback gradient
+                    this.drawFallbackLayer(ctx, layer);
+                }
+            });
+        }
+
+        drawFallbackLayer(ctx, layer) {
+            if (layer.key === 'bg_sky') {
+                const grad = ctx.createLinearGradient(0, 0, 0, 300);
+                grad.addColorStop(0, '#1a1a2e');
+                grad.addColorStop(1, '#16213e');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, 300);
+            } else if (layer.key === 'bg_ground') {
+                ctx.fillStyle = '#0f3460';
+                ctx.fillRect(0, layer.y, GAME_CONFIG.WIDTH, layer.height);
+            }
+        }
+    }
+
+    // ============================================
+    // SQUASH & STRETCH SYSTEM
+    // ============================================
+    class SquashStretch {
+        constructor() {
+            this.scaleX = 1;
+            this.scaleY = 1;
+            this.targetScaleX = 1;
+            this.targetScaleY = 1;
+        }
+
+        applyMovement(velocityX, velocityY) {
+            const speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+            const stretchFactor = Math.min(speed / 10, 0.25);
+
+            if (speed > 0.5) {
+                this.targetScaleX = 1 + stretchFactor * 0.8;
+                this.targetScaleY = 1 - stretchFactor * 0.4;
+            } else {
+                this.targetScaleX = 1;
+                this.targetScaleY = 1;
+            }
+        }
+
+        triggerEat() {
+            this.scaleX = 1.35;
+            this.scaleY = 0.65;
+            this.targetScaleX = 1;
+            this.targetScaleY = 1;
+        }
+
+        triggerBounce() {
+            this.scaleX = 0.7;
+            this.scaleY = 1.35;
+            this.targetScaleX = 1;
+            this.targetScaleY = 1;
+        }
+
+        update() {
+            const lerp = 0.15;
+            this.scaleX += (this.targetScaleX - this.scaleX) * lerp;
+            this.scaleY += (this.targetScaleY - this.scaleY) * lerp;
+        }
+
+        getTransform() {
+            return { scaleX: this.scaleX, scaleY: this.scaleY };
+        }
+    }
+
+    // ============================================
+    // FEVER MODE
+    // ============================================
+    class FeverMode {
+        constructor() {
+            this.gauge = 0;
+            this.maxGauge = FEVER_CONFIG.gaugeMax;
+            this.active = false;
+            this.duration = FEVER_CONFIG.duration;
+            this.timer = 0;
+            this.screenFlash = 0;
+            this.particles = [];
+        }
+
+        charge(amount) {
+            if (this.active) return;
+            this.gauge = Math.min(this.maxGauge, this.gauge + amount);
+            if (this.gauge >= this.maxGauge) {
+                this.activate();
+            }
+        }
+
+        activate() {
+            this.active = true;
+            this.timer = this.duration;
+            this.screenFlash = 1;
+
+            // Burst particles
+            for (let i = 0; i < 40; i++) {
+                this.particles.push(this.createParticle());
+            }
+        }
+
+        createParticle() {
+            const colors = ['#ff006e', '#fb5607', '#ffbe0b', '#8338ec', '#00f5d4'];
+            return {
+                x: Math.random() * GAME_CONFIG.WIDTH,
+                y: Math.random() * GAME_CONFIG.HEIGHT * 0.6,
+                vx: (Math.random() - 0.5) * 12,
+                vy: (Math.random() - 0.5) * 12,
+                size: Math.random() * 12 + 6,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: 800 + Math.random() * 400
+            };
+        }
+
+        update(deltaTime) {
+            if (this.active) {
+                this.timer -= deltaTime;
+                if (this.timer <= 0) {
+                    this.deactivate();
+                }
+                // Continuous particle emission
+                if (Math.random() < 0.4) {
+                    this.particles.push(this.createParticle());
+                }
+            }
+
+            // Update particles
+            this.particles = this.particles.filter(p => {
+                p.x += p.vx * deltaTime * 0.05;
+                p.y += p.vy * deltaTime * 0.05;
+                p.vy += 0.1;
+                p.life -= deltaTime;
+                p.size *= 0.995;
+                return p.life > 0;
+            });
+
+            // Fade screen flash
+            if (this.screenFlash > 0) {
+                this.screenFlash -= deltaTime * 0.003;
+            }
+        }
+
+        deactivate() {
+            this.active = false;
+            this.gauge = 0;
+        }
+
+        draw(ctx) {
+            // Screen flash
+            if (this.screenFlash > 0) {
+                ctx.fillStyle = `rgba(255, 0, 110, ${this.screenFlash * 0.25})`;
+                ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+            }
+
+            // Particles
+            this.particles.forEach(p => {
+                ctx.globalAlpha = Math.min(1, p.life / 400);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        drawGauge(ctx) {
+            const x = GAME_CONFIG.WIDTH - 35;
+            const y = 80;
+            const height = 180;
+            const width = 18;
+
+            // Background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.beginPath();
+            ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 8);
+            ctx.fill();
+
+            // Fill
+            const fillHeight = (this.gauge / this.maxGauge) * height;
+            const gradient = ctx.createLinearGradient(x, y + height, x, y);
+            gradient.addColorStop(0, '#ff006e');
+            gradient.addColorStop(0.5, '#fb5607');
+            gradient.addColorStop(1, '#ffbe0b');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.roundRect(x, y + height - fillHeight, width, fillHeight, 6);
+            ctx.fill();
+
+            // Border
+            ctx.strokeStyle = this.active ? '#fff' : 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 8);
+            ctx.stroke();
+
+            // "FEVER" text when active
+            if (this.active) {
+                ctx.save();
+                ctx.translate(x + width / 2, y + height / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Fredoka One';
+                ctx.textAlign = 'center';
+                ctx.fillText('FEVER!', 0, 5);
+                ctx.restore();
+            }
+        }
+
+        getMultiplier() {
+            return this.active ? FEVER_CONFIG.scoreMultiplier : 1;
+        }
+
+        isMagnetActive() {
+            return this.active;
+        }
     }
 
     // ============================================
     // VILLAGER CLASS
     // ============================================
     class Villager {
-        constructor(id, startX, targetX) {
+        constructor(id, startY) {
             this.id = id;
-            this.x = startX;
-            this.y = 380 + Math.random() * 40;
-            this.targetX = targetX;
-            this.speed = 0.3 + Math.random() * 0.2;
+            // Spawn from sides, move toward center
+            this.fromLeft = Math.random() > 0.5;
+            this.x = this.fromLeft ? -40 : GAME_CONFIG.WIDTH + 40;
+            this.y = GAME_CONFIG.VILLAGER_SPAWN_Y + Math.random() * 60 - 30;
+            this.targetX = GAME_CONFIG.WIDTH / 2;
+            this.speed = 0.4 + Math.random() * 0.3;
             this.scared = false;
-            this.scaredTimer = 0;
             this.bobOffset = Math.random() * Math.PI * 2;
-            this.scale = 0.7 + Math.random() * 0.3;
+            this.scale = 0.8 + Math.random() * 0.3;
             this.active = true;
             this.beingEaten = false;
             this.eatenProgress = 0;
+            this.squash = new SquashStretch();
         }
 
-        update(deltaTime, dangerLevel) {
+        update(deltaTime) {
             if (!this.active) return;
 
-            // Move toward Caiso (backing up into mouth)
-            const moveSpeed = this.speed * (this.scared ? 1.5 : 1) * (deltaTime / 16);
-            this.x += moveSpeed;
+            // Move toward center (where Caiso is in vertical layout)
+            const moveSpeed = this.speed * (this.scared ? 0.6 : 1) * (deltaTime / 16);
+            const direction = this.fromLeft ? 1 : -1;
+            this.x += moveSpeed * direction;
 
-            // Get scared when close to Caiso
-            if (this.x > this.targetX - 150 && !this.scared) {
+            // Get scared when close to center
+            const distToCenter = Math.abs(this.x - this.targetX);
+            if (distToCenter < 180 && !this.scared) {
                 this.scared = true;
             }
 
             // Being eaten animation
             if (this.beingEaten) {
-                this.eatenProgress += deltaTime / 500;
-                this.x += 2;
+                this.eatenProgress += deltaTime / 400;
+                this.y -= 1.5;
                 if (this.eatenProgress >= 1) {
                     this.active = false;
                 }
             }
 
             // Bob animation
-            this.bobOffset += deltaTime * 0.01;
+            this.bobOffset += deltaTime * 0.012;
+            this.squash.update();
         }
 
-        draw(ctx, images) {
+        draw(ctx, assets) {
             if (!this.active) return;
 
             const bob = Math.sin(this.bobOffset) * 3;
-            const imgKey = this.scared ? 'villagerScared' : 'villager';
-            const img = images.get(imgKey);
+            const spriteKey = this.scared ? 'villager_scared' : 'villager_normal';
+            const img = assets.get(spriteKey);
+
+            ctx.save();
+
+            if (this.beingEaten) {
+                ctx.globalAlpha = 1 - this.eatenProgress;
+            }
+
+            const width = 50 * this.scale;
+            const height = 50 * this.scale;
+            const transform = this.squash.getTransform();
+
+            ctx.translate(this.x, this.y + bob);
+            ctx.scale(transform.scaleX * (this.fromLeft ? 1 : -1), transform.scaleY);
 
             if (img) {
-                ctx.save();
-                const width = 40 * this.scale;
-                const height = 60 * this.scale;
-
-                if (this.beingEaten) {
-                    ctx.globalAlpha = 1 - this.eatenProgress;
-                    ctx.translate(this.x, this.y + bob - this.eatenProgress * 30);
-                    ctx.scale(1 - this.eatenProgress * 0.5, 1 - this.eatenProgress * 0.5);
-                } else {
-                    ctx.translate(this.x, this.y + bob);
-                }
-
                 ctx.drawImage(img, -width/2, -height/2, width, height);
-                ctx.restore();
+            } else {
+                // Fallback
+                ctx.fillStyle = this.scared ? '#e74c3c' : '#3498db';
+                ctx.beginPath();
+                ctx.arc(0, 0, width/3, 0, Math.PI * 2);
+                ctx.fill();
             }
+
+            ctx.restore();
         }
     }
 
@@ -578,105 +754,218 @@
     // PLAYER CLASS
     // ============================================
     class Player {
-        constructor(x, y) {
-            this.x = x;
-            this.y = y;
+        constructor() {
+            this.x = GAME_CONFIG.WIDTH / 2;
+            this.y = GAME_CONFIG.PLAYER_Y;
+            this.vx = 0;
+            this.vy = 0;
             this.throwing = false;
             this.throwTimer = 0;
+            this.squash = new SquashStretch();
+            this.maxSpeed = 6;
+            this.acceleration = 0.4;
+            this.friction = 0.88;
         }
 
-        throw() {
-            this.throwing = true;
-            this.throwTimer = 300;
-        }
+        update(deltaTime, joystick) {
+            // Apply joystick input
+            this.vx += joystick.direction.x * this.acceleration * (deltaTime / 16);
+            this.vy += joystick.direction.y * this.acceleration * (deltaTime / 16);
 
-        update(deltaTime) {
+            // Friction
+            this.vx *= this.friction;
+            this.vy *= this.friction;
+
+            // Clamp speed
+            const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (speed > this.maxSpeed) {
+                this.vx = (this.vx / speed) * this.maxSpeed;
+                this.vy = (this.vy / speed) * this.maxSpeed;
+            }
+
+            // Move
+            this.x += this.vx * (deltaTime / 16);
+            this.y += this.vy * (deltaTime / 16);
+
+            // Bounds - keep in control area
+            const margin = 50;
+            const minY = GAME_CONFIG.HEIGHT - GAME_CONFIG.CONTROL_HEIGHT - 60;
+            const maxY = GAME_CONFIG.HEIGHT - 40;
+
+            if (this.x < margin) { this.x = margin; this.vx = Math.abs(this.vx) * 0.5; this.squash.triggerBounce(); }
+            if (this.x > GAME_CONFIG.WIDTH - margin) { this.x = GAME_CONFIG.WIDTH - margin; this.vx = -Math.abs(this.vx) * 0.5; this.squash.triggerBounce(); }
+            if (this.y < minY) { this.y = minY; this.vy = Math.abs(this.vy) * 0.5; }
+            if (this.y > maxY) { this.y = maxY; this.vy = -Math.abs(this.vy) * 0.5; }
+
+            // Throw animation
             if (this.throwTimer > 0) {
                 this.throwTimer -= deltaTime;
                 if (this.throwTimer <= 0) {
                     this.throwing = false;
                 }
             }
+
+            this.squash.applyMovement(this.vx, this.vy);
+            this.squash.update();
         }
 
-        draw(ctx, images) {
-            const img = images.get(this.throwing ? 'playerThrowing' : 'player');
+        throw() {
+            this.throwing = true;
+            this.throwTimer = 250;
+            this.squash.triggerEat();
+        }
+
+        draw(ctx, assets) {
+            const img = assets.get('player_idle');
+            const transform = this.squash.getTransform();
+
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.scale(transform.scaleX, transform.scaleY);
+
+            const width = 80;
+            const height = 100;
+
             if (img) {
-                const width = 100;
-                const height = 125;
-                ctx.drawImage(img, this.x - width/2, this.y - height/2, width, height);
+                ctx.drawImage(img, -width/2, -height/2, width, height);
+            } else {
+                // Fallback
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.arc(0, -10, 25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffeaa7';
+                ctx.beginPath();
+                ctx.arc(0, -35, 18, 0, Math.PI * 2);
+                ctx.fill();
             }
+
+            ctx.restore();
         }
     }
 
     // ============================================
-    // CAISO CLASS (using images)
+    // CAISO CLASS
     // ============================================
     class Caiso {
-        constructor(x, y) {
-            this.x = x;
-            this.y = y;
-            this.expression = 'idle';
+        constructor() {
+            this.x = GAME_CONFIG.WIDTH / 2;
+            this.y = GAME_CONFIG.CAISO_Y;
+            this.evolutionTier = 0;
+            this.expression = 'hungry';
             this.bounceOffset = 0;
             this.eatTimer = 0;
             this.guiltyTimer = 0;
+            this.squash = new SquashStretch();
         }
 
         reset() {
-            this.expression = 'idle';
+            this.evolutionTier = 0;
+            this.expression = 'hungry';
             this.eatTimer = 0;
             this.guiltyTimer = 0;
         }
 
+        getEvolutionTier(level) {
+            for (let i = EVOLUTION_TIERS.length - 1; i >= 0; i--) {
+                if (level >= EVOLUTION_TIERS[i].level) {
+                    return i;
+                }
+            }
+            return 0;
+        }
+
+        updateEvolution(level) {
+            const newTier = this.getEvolutionTier(level);
+            if (newTier > this.evolutionTier) {
+                this.evolutionTier = newTier;
+                this.squash.scaleX = 0.6;
+                this.squash.scaleY = 1.5;
+                return true;
+            }
+            return false;
+        }
+
         eat() {
-            this.expression = 'eating';
+            this.expression = 'happy';
             this.eatTimer = 400;
+            this.squash.triggerEat();
         }
 
         showGuilty() {
-            this.expression = 'guilty';
+            this.expression = 'sad';
             this.guiltyTimer = 600;
         }
 
         update(deltaTime) {
-            this.bounceOffset = Math.sin(Date.now() * 0.003) * 8;
+            this.bounceOffset = Math.sin(Date.now() * 0.003) * 6;
 
             if (this.eatTimer > 0) {
                 this.eatTimer -= deltaTime;
-                if (this.eatTimer <= 0 && this.expression === 'eating') {
-                    this.expression = 'idle';
+                if (this.eatTimer <= 0 && this.expression === 'happy') {
+                    this.expression = 'hungry';
                 }
             }
 
             if (this.guiltyTimer > 0) {
                 this.guiltyTimer -= deltaTime;
-                if (this.guiltyTimer <= 0 && this.expression === 'guilty') {
-                    this.expression = 'idle';
+                if (this.guiltyTimer <= 0 && this.expression === 'sad') {
+                    this.expression = 'hungry';
                 }
             }
+
+            this.squash.update();
         }
 
-        draw(ctx, images) {
-            let imgKey = 'caisoIdle';
-            if (this.expression === 'eating') imgKey = 'caisoEating';
-            else if (this.expression === 'happy') imgKey = 'caisoHappy';
-            else if (this.expression === 'sad') imgKey = 'caisoSad';
+        draw(ctx, assets) {
+            const tier = EVOLUTION_TIERS[this.evolutionTier];
+            let spriteKey = tier.sprite;
 
-            const img = images.get(imgKey);
-            if (img) {
-                const width = 220;
-                const height = 242;
-                ctx.save();
-                ctx.translate(this.x, this.y + this.bounceOffset);
-                // Flip horizontally to face left
-                ctx.scale(-1, 1);
-                ctx.drawImage(img, -width/2, -height/2, width, height);
-                ctx.restore();
+            if (this.expression === 'happy') {
+                spriteKey = 'caiso_adult_happy';
             }
+
+            const img = assets.get(spriteKey);
+            const transform = this.squash.getTransform();
+
+            ctx.save();
+            ctx.translate(this.x, this.y + this.bounceOffset);
+            ctx.scale(transform.scaleX * tier.scale, transform.scaleY * tier.scale);
+
+            const baseSize = 160;
+
+            if (img) {
+                // Glow effect
+                ctx.shadowColor = '#9b59b6';
+                ctx.shadowBlur = 25;
+                ctx.drawImage(img, -baseSize/2, -baseSize/2, baseSize, baseSize);
+                ctx.shadowBlur = 0;
+            } else {
+                // Fallback
+                ctx.fillStyle = '#9b59b6';
+                ctx.beginPath();
+                ctx.arc(0, 0, baseSize/2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(-25, -20, 18, 0, Math.PI * 2);
+                ctx.arc(25, -20, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Mouth
+                ctx.fillStyle = '#2c2c2c';
+                ctx.beginPath();
+                ctx.arc(0, 25, 35, 0, Math.PI);
+                ctx.fill();
+            }
+
+            ctx.restore();
         }
 
         getMouthPosition() {
-            return { x: this.x - 60, y: this.y + 30 + this.bounceOffset };
+            return { x: this.x, y: this.y + 30 + this.bounceOffset };
         }
     }
 
@@ -684,9 +973,9 @@
     // FLYING FOOD CLASS
     // ============================================
     class FlyingFood {
-        constructor(foodData, startX, startY, endX, endY, images) {
+        constructor(foodData, startX, startY, endX, endY, assets) {
             this.foodData = foodData;
-            this.images = images;
+            this.assets = assets;
             this.startX = startX;
             this.startY = startY;
             this.endX = endX;
@@ -694,7 +983,7 @@
             this.x = startX;
             this.y = startY;
             this.progress = 0;
-            this.duration = 450;
+            this.duration = 380;
             this.elapsed = 0;
             this.rotation = 0;
             this.arrived = false;
@@ -704,15 +993,17 @@
             this.elapsed += deltaTime;
             this.progress = Math.min(this.elapsed / this.duration, 1);
 
-            const t = this.progress;
+            // Ease out
+            const t = 1 - Math.pow(1 - this.progress, 3);
             this.x = this.startX + (this.endX - this.startX) * t;
 
-            const controlY = Math.min(this.startY, this.endY) - 120;
+            // Arc trajectory
+            const controlY = Math.min(this.startY, this.endY) - 150;
             this.y = (1 - t) * (1 - t) * this.startY +
                      2 * (1 - t) * t * controlY +
                      t * t * this.endY;
 
-            this.rotation += 0.15;
+            this.rotation += 0.18;
 
             if (this.progress >= 1) {
                 this.arrived = true;
@@ -720,15 +1011,28 @@
         }
 
         draw(ctx) {
-            const img = this.images.get(this.foodData.asset);
+            const img = this.assets.get(this.foodData.asset);
+
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rotation);
+
+            const size = 45;
+
+            // Glow
+            ctx.shadowColor = this.foodData.color;
+            ctx.shadowBlur = 15;
+
             if (img) {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.rotation);
-                const size = 50;
                 ctx.drawImage(img, -size/2, -size/2, size, size);
-                ctx.restore();
+            } else {
+                ctx.fillStyle = this.foodData.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, size/2.5, 0, Math.PI * 2);
+                ctx.fill();
             }
+
+            ctx.restore();
         }
     }
 
@@ -739,10 +1043,10 @@
         constructor(canvas) {
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
-            this.canvas.width = GAME_WIDTH;
-            this.canvas.height = GAME_HEIGHT;
+            this.canvas.width = GAME_CONFIG.WIDTH;
+            this.canvas.height = GAME_CONFIG.HEIGHT;
 
-            this.images = new ImageLoader();
+            this.assets = new AssetLoader();
             this.state = 'loading';
             this.hunger = 100;
             this.villagerCount = 100;
@@ -762,14 +1066,18 @@
             this.particles = [];
             this.floatingTexts = [];
 
-            this.caiso = new Caiso(GAME_WIDTH - 130, 320);
-            this.player = new Player(200, 480);
+            this.caiso = new Caiso();
+            this.player = new Player();
+            this.joystick = new VirtualJoystick(canvas);
+            this.fever = new FeverMode();
+            this.background = null;
 
             this.init();
         }
 
         async init() {
-            await this.images.loadAll(ASSETS);
+            await this.assets.loadAll();
+            this.background = new ParallaxBackground(this.assets);
             this.state = 'menu';
             this.setupEventListeners();
             this.hideLoading();
@@ -778,7 +1086,7 @@
         hideLoading() {
             setTimeout(() => {
                 document.getElementById('loadingScreen').style.display = 'none';
-            }, 800);
+            }, 1000);
         }
 
         setupEventListeners() {
@@ -794,9 +1102,6 @@
                 else if (this.state === 'playing') this.feedCaiso();
             } else if (e.code === 'KeyR') {
                 if (this.state === 'gameover' || this.state === 'victory') this.startGame();
-            } else if (e.code === 'KeyC' || e.code === 'KeyP') {
-                if (this.state === 'playing') this.state = 'paused';
-                else if (this.state === 'paused') this.state = 'playing';
             } else if (e.key >= '1' && e.key <= '6') {
                 this.selectFoodByKey(e.key);
             }
@@ -805,22 +1110,6 @@
         handleClick(e) {
             if (this.state === 'menu') this.startGame();
             else if (this.state === 'gameover' || this.state === 'victory') this.startGame();
-            else if (this.state === 'paused') {
-                const rect = this.canvas.getBoundingClientRect();
-                const x = (e.clientX - rect.left) * (GAME_WIDTH / rect.width);
-                const y = (e.clientY - rect.top) * (GAME_HEIGHT / rect.height);
-                this.handleFoodMenuClick(x, y);
-            }
-        }
-
-        handleFoodMenuClick(x, y) {
-            const foods = Object.entries(FOODS);
-            foods.forEach(([key, food], index) => {
-                const itemY = 180 + index * 50;
-                if (y >= itemY - 20 && y <= itemY + 30 && food.unlockLevel <= this.level) {
-                    this.selectedFoodKey = key;
-                }
-            });
         }
 
         selectFoodByKey(key) {
@@ -850,18 +1139,17 @@
             this.particles = [];
             this.floatingTexts = [];
             this.caiso.reset();
+            this.fever = new FeverMode();
 
             // Create initial villagers
             this.villagers = [];
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 12; i++) {
                 this.spawnVillager(i);
             }
         }
 
         spawnVillager(id) {
-            const startX = -50 - Math.random() * 200;
-            const targetX = this.caiso.x - 80;
-            this.villagers.push(new Villager(id, startX, targetX));
+            this.villagers.push(new Villager(id, GAME_CONFIG.VILLAGER_SPAWN_Y));
         }
 
         feedCaiso() {
@@ -875,19 +1163,20 @@
             const mouthPos = this.caiso.getMouthPosition();
             this.flyingFoods.push(new FlyingFood(
                 food,
-                this.player.x + 30,
+                this.player.x,
                 this.player.y - 40,
                 mouthPos.x,
                 mouthPos.y,
-                this.images
+                this.assets
             ));
 
-            this.comboTimer = COMBO_TIMEOUT;
+            this.comboTimer = GAME_CONFIG.COMBO_TIMEOUT;
         }
 
         consumeFood(food) {
-            const multiplier = this.getComboMultiplier();
-            const reduction = food.hungerReduction * multiplier;
+            const feverMult = this.fever.getMultiplier();
+            const comboMult = this.getComboMultiplier();
+            const reduction = food.hungerReduction * comboMult * feverMult;
 
             this.hunger = Math.max(0, this.hunger - reduction);
             this.totalHungerReduced += reduction;
@@ -895,37 +1184,53 @@
             this.combo++;
             if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
-            const newLevel = Math.floor(this.totalHungerReduced / 5) + 1;
+            // Charge fever
+            this.fever.charge(FEVER_CONFIG.chargeRate + (this.combo > 3 ? FEVER_CONFIG.comboBonus : 0));
+
+            // Level up
+            const newLevel = Math.floor(this.totalHungerReduced / 4) + 1;
             if (newLevel > this.level) this.levelUp(newLevel);
+
+            // Evolution check
+            if (this.caiso.updateEvolution(this.level)) {
+                const tier = EVOLUTION_TIERS[this.caiso.evolutionTier];
+                this.addFloatingText(`EVOLVED: ${tier.name}!`, GAME_CONFIG.WIDTH / 2, 200, '#ff006e');
+                this.addParticles(GAME_CONFIG.WIDTH / 2, 180, '#ff006e', 35);
+            }
 
             const mouthPos = this.caiso.getMouthPosition();
             this.addFloatingText(`-${reduction.toFixed(1)}%`, mouthPos.x, mouthPos.y - 60, '#2ed573');
+
             if (this.combo >= 3) {
-                this.addFloatingText(`${this.combo}x COMBO!`, mouthPos.x, mouthPos.y - 90, '#f39c12');
+                const comboColors = ['#f1c40f', '#f39c12', '#e74c3c', '#ff006e'];
+                const colorIdx = Math.min(Math.floor(this.combo / 5), comboColors.length - 1);
+                this.addFloatingText(`${this.combo}x COMBO!`, mouthPos.x, mouthPos.y - 90, comboColors[colorIdx]);
             }
-            this.addParticles(mouthPos.x, mouthPos.y, food.color, 12);
+
+            this.addParticles(mouthPos.x, mouthPos.y, food.color, 15);
             this.caiso.eat();
 
             if (this.hunger <= 0) {
                 this.state = 'victory';
                 this.caiso.expression = 'happy';
-                this.addParticles(GAME_WIDTH / 2, GAME_HEIGHT / 2, '#ffd700', 50);
+                this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#ffd700', 60);
             }
         }
 
         levelUp(newLevel) {
             this.level = newLevel;
-            this.addFloatingText(`LEVEL ${newLevel}!`, GAME_WIDTH / 2, 120, '#00d2d3');
-            this.addParticles(GAME_WIDTH / 2, 80, '#00d2d3', 30);
+            this.addFloatingText(`LEVEL ${newLevel}!`, GAME_CONFIG.WIDTH / 2, 120, '#00d2d3');
+            this.addParticles(GAME_CONFIG.WIDTH / 2, 100, '#00d2d3', 25);
 
             Object.entries(FOODS).forEach(([key, food]) => {
                 if (food.unlockLevel === newLevel) {
-                    this.addFloatingText(`${food.name} UNLOCKED!`, GAME_WIDTH / 2, 160, food.color);
+                    this.addFloatingText(`${food.name} UNLOCKED!`, GAME_CONFIG.WIDTH / 2, 160, food.color);
                 }
             });
         }
 
         getComboMultiplier() {
+            if (this.combo >= 15) return 4.0;
             if (this.combo >= 10) return 3.0;
             if (this.combo >= 5) return 2.0;
             if (this.combo >= 3) return 1.5;
@@ -935,14 +1240,13 @@
         consumeVillager() {
             if (this.villagerCount <= 0) return;
 
-            // Find closest villager to Caiso
             let closestVillager = null;
             let closestDist = Infinity;
 
             this.villagers.forEach(v => {
                 if (v.active && !v.beingEaten) {
-                    const dist = this.caiso.x - v.x;
-                    if (dist < closestDist && dist > 0) {
+                    const dist = Math.abs(v.x - this.caiso.x) + Math.abs(v.y - GAME_CONFIG.CAISO_Y);
+                    if (dist < closestDist) {
                         closestDist = dist;
                         closestVillager = v;
                     }
@@ -952,10 +1256,9 @@
             if (closestVillager) {
                 closestVillager.beingEaten = true;
                 this.villagerCount--;
-                this.addFloatingText('-1', 80, GAME_HEIGHT - 60, '#e74c3c');
+                this.addFloatingText('-1', 60, GAME_CONFIG.HEIGHT - 100, '#e74c3c');
                 this.caiso.showGuilty();
 
-                // Spawn new villager to replace
                 if (this.villagerCount > 0) {
                     this.spawnVillager(Date.now());
                 }
@@ -968,18 +1271,18 @@
         }
 
         addFloatingText(text, x, y, color) {
-            this.floatingTexts.push({ text, x, y, color, alpha: 1, vy: -2, life: 60 });
+            this.floatingTexts.push({ text, x, y, color, alpha: 1, vy: -2.5, life: 50 });
         }
 
         addParticles(x, y, color, count) {
             for (let i = 0; i < count; i++) {
                 this.particles.push({
                     x, y,
-                    vx: (Math.random() - 0.5) * 12,
-                    vy: (Math.random() - 0.5) * 12 - 6,
+                    vx: (Math.random() - 0.5) * 14,
+                    vy: (Math.random() - 0.5) * 14 - 5,
                     color,
-                    size: Math.random() * 8 + 4,
-                    life: 40 + Math.random() * 20
+                    size: Math.random() * 10 + 4,
+                    life: 35 + Math.random() * 20
                 });
             }
         }
@@ -989,9 +1292,16 @@
 
             this.gameTime += deltaTime;
 
+            // Background parallax
+            this.background.update(this.player.vx, deltaTime);
+
             // Villager timer
+            const consumeInterval = this.fever.active ?
+                GAME_CONFIG.VILLAGER_CONSUME_INTERVAL * 1.5 :
+                GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
+
             this.villagerTimer += deltaTime;
-            if (this.villagerTimer >= VILLAGER_CONSUME_INTERVAL) {
+            if (this.villagerTimer >= consumeInterval) {
                 this.villagerTimer = 0;
                 this.consumeVillager();
             }
@@ -1004,10 +1314,11 @@
 
             // Update entities
             this.caiso.update(deltaTime);
-            this.player.update(deltaTime);
+            this.player.update(deltaTime, this.joystick);
+            this.fever.update(deltaTime);
 
             // Update villagers
-            this.villagers.forEach(v => v.update(deltaTime, this.villagerTimer / VILLAGER_CONSUME_INTERVAL));
+            this.villagers.forEach(v => v.update(deltaTime));
             this.villagers = this.villagers.filter(v => v.active);
 
             // Update flying foods
@@ -1023,7 +1334,7 @@
             this.particles = this.particles.filter(p => {
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vy += 0.4;
+                p.vy += 0.35;
                 p.life--;
                 return p.life > 0;
             });
@@ -1031,22 +1342,25 @@
             // Update floating texts
             this.floatingTexts = this.floatingTexts.filter(t => {
                 t.y += t.vy;
-                t.alpha -= 0.015;
+                t.alpha -= 0.018;
                 t.life--;
                 return t.life > 0;
             });
         }
 
         render() {
-            this.drawBackground();
+            const ctx = this.ctx;
+
+            // Clear
+            ctx.fillStyle = '#0a0a1a';
+            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
             if (this.state === 'loading') {
                 this.drawLoadingScreen();
             } else if (this.state === 'menu') {
                 this.drawMenuScreen();
-            } else if (this.state === 'playing' || this.state === 'paused') {
+            } else if (this.state === 'playing') {
                 this.drawGame();
-                if (this.state === 'paused') this.drawPauseMenu();
             } else if (this.state === 'gameover') {
                 this.drawGameOverScreen();
             } else if (this.state === 'victory') {
@@ -1054,107 +1368,37 @@
             }
         }
 
-        drawBackground() {
-            const ctx = this.ctx;
-
-            // Sky gradient
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-            skyGrad.addColorStop(0, '#87CEEB');
-            skyGrad.addColorStop(0.6, '#E0F7FA');
-            skyGrad.addColorStop(1, '#81C784');
-            ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-            // Sun
-            ctx.fillStyle = '#FFF59D';
-            ctx.beginPath();
-            ctx.arc(100, 80, 40, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#FFEB3B';
-            ctx.beginPath();
-            ctx.arc(100, 80, 30, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Clouds
-            this.drawCloud(ctx, 200, 60, 0.8);
-            this.drawCloud(ctx, 500, 40, 1);
-            this.drawCloud(ctx, 750, 70, 0.6);
-
-            // Distant buildings (village)
-            ctx.fillStyle = '#78909C';
-            ctx.fillRect(20, 250, 40, 80);
-            ctx.fillRect(70, 270, 35, 60);
-            ctx.fillRect(115, 260, 45, 70);
-            // Roofs
-            ctx.fillStyle = '#5D4037';
-            ctx.beginPath();
-            ctx.moveTo(15, 250); ctx.lineTo(40, 220); ctx.lineTo(65, 250);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(65, 270); ctx.lineTo(87, 245); ctx.lineTo(110, 270);
-            ctx.fill();
-
-            // Ground
-            ctx.fillStyle = '#81C784';
-            ctx.fillRect(0, 430, GAME_WIDTH, 150);
-
-            // Path/road
-            ctx.fillStyle = '#A1887F';
-            ctx.beginPath();
-            ctx.moveTo(0, 400);
-            ctx.quadraticCurveTo(GAME_WIDTH / 2, 420, GAME_WIDTH, 380);
-            ctx.lineTo(GAME_WIDTH, 480);
-            ctx.quadraticCurveTo(GAME_WIDTH / 2, 500, 0, 480);
-            ctx.fill();
-
-            // Grass tufts
-            ctx.fillStyle = '#4CAF50';
-            for (let i = 0; i < 20; i++) {
-                const gx = (i * 47) % GAME_WIDTH;
-                const gy = 440 + (i * 13) % 80;
-                ctx.beginPath();
-                ctx.moveTo(gx, gy);
-                ctx.lineTo(gx - 5, gy - 15);
-                ctx.lineTo(gx, gy - 10);
-                ctx.lineTo(gx + 5, gy - 15);
-                ctx.lineTo(gx, gy);
-                ctx.fill();
-            }
-        }
-
-        drawCloud(ctx, x, y, scale) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.beginPath();
-            ctx.arc(x, y, 25 * scale, 0, Math.PI * 2);
-            ctx.arc(x + 25 * scale, y - 10 * scale, 30 * scale, 0, Math.PI * 2);
-            ctx.arc(x + 55 * scale, y, 25 * scale, 0, Math.PI * 2);
-            ctx.arc(x + 30 * scale, y + 10 * scale, 20 * scale, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
         drawGame() {
             const ctx = this.ctx;
 
+            // Background
+            this.background.draw(ctx);
+
+            // Fever effects (behind entities)
+            if (this.fever.active) {
+                this.fever.draw(ctx);
+            }
+
             // Danger zone indicator
-            const timerProgress = this.villagerTimer / VILLAGER_CONSUME_INTERVAL;
-            ctx.fillStyle = `rgba(231, 76, 60, ${0.1 + timerProgress * 0.2})`;
-            ctx.fillRect(GAME_WIDTH - 250, 300, 250, 200);
+            const timerProgress = this.villagerTimer / GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
+            ctx.fillStyle = `rgba(231, 76, 60, ${0.05 + timerProgress * 0.15})`;
+            ctx.fillRect(0, GAME_CONFIG.CAISO_Y - 80, GAME_CONFIG.WIDTH, 200);
 
             // Draw villagers
-            this.villagers.forEach(v => v.draw(ctx, this.images));
+            this.villagers.forEach(v => v.draw(ctx, this.assets));
 
             // Draw Caiso
-            this.caiso.draw(ctx, this.images);
+            this.caiso.draw(ctx, this.assets);
 
             // Draw player
-            this.player.draw(ctx, this.images);
+            this.player.draw(ctx, this.assets);
 
             // Draw flying foods
             this.flyingFoods.forEach(food => food.draw(ctx));
 
             // Draw particles
             this.particles.forEach(p => {
-                ctx.globalAlpha = p.life / 60;
+                ctx.globalAlpha = p.life / 55;
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -1163,7 +1407,7 @@
             ctx.globalAlpha = 1;
 
             // Draw floating texts
-            ctx.font = 'bold 26px Fredoka One';
+            ctx.font = 'bold 22px Fredoka One';
             ctx.textAlign = 'center';
             this.floatingTexts.forEach(t => {
                 ctx.globalAlpha = t.alpha;
@@ -1172,19 +1416,33 @@
             });
             ctx.globalAlpha = 1;
 
+            // Draw joystick
+            this.joystick.draw(ctx);
+
+            // Draw UI
             this.drawUI();
         }
 
         drawUI() {
             const ctx = this.ctx;
 
+            // Top HUD background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HUD_HEIGHT);
+
             // Hunger bar
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.roundRect(ctx, 50, 15, GAME_WIDTH - 100, 35, 10);
+            const barX = 80;
+            const barWidth = GAME_CONFIG.WIDTH - 130;
+            const barY = 18;
+            const barHeight = 24;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.beginPath();
+            ctx.roundRect(barX, barY, barWidth, barHeight, 12);
             ctx.fill();
 
-            const hungerWidth = (GAME_WIDTH - 110) * (this.hunger / 100);
-            const hGrad = ctx.createLinearGradient(55, 0, 55 + hungerWidth, 0);
+            const hungerWidth = barWidth * (this.hunger / 100);
+            const hGrad = ctx.createLinearGradient(barX, 0, barX + hungerWidth, 0);
             if (this.hunger > 50) {
                 hGrad.addColorStop(0, '#e74c3c');
                 hGrad.addColorStop(1, '#c0392b');
@@ -1196,247 +1454,197 @@
                 hGrad.addColorStop(1, '#27ae60');
             }
             ctx.fillStyle = hGrad;
-            this.roundRect(ctx, 55, 20, hungerWidth, 25, 8);
+            ctx.beginPath();
+            ctx.roundRect(barX + 2, barY + 2, Math.max(0, hungerWidth - 4), barHeight - 4, 10);
             ctx.fill();
 
             ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Fredoka One';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${this.hunger.toFixed(1)}%`, barX + barWidth / 2, barY + 17);
+
+            // Level badge
+            ctx.fillStyle = 'rgba(0, 212, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(40, 30, 26, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#00d4ff';
             ctx.font = 'bold 18px Fredoka One';
             ctx.textAlign = 'center';
-            ctx.fillText(`HUNGER: ${this.hunger.toFixed(1)}%`, GAME_WIDTH / 2, 40);
+            ctx.fillText(this.level, 40, 36);
 
-            // Level
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.roundRect(ctx, 15, 55, 100, 35, 8);
-            ctx.fill();
-            ctx.fillStyle = '#00BCD4';
-            ctx.font = 'bold 20px Fredoka One';
-            ctx.textAlign = 'center';
-            ctx.fillText(`LVL: ${this.level}`, 65, 80);
-
-            // Combo
-            if (this.combo > 0) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                this.roundRect(ctx, GAME_WIDTH - 130, 55, 115, 40, 8);
-                ctx.fill();
-
-                const comboColor = this.combo >= 10 ? '#e74c3c' :
-                                   this.combo >= 5 ? '#f39c12' :
-                                   this.combo >= 3 ? '#f1c40f' : '#fff';
+            // Combo display
+            if (this.combo >= 3) {
+                const comboColor = this.combo >= 15 ? '#ff006e' :
+                                   this.combo >= 10 ? '#e74c3c' :
+                                   this.combo >= 5 ? '#f39c12' : '#f1c40f';
                 ctx.fillStyle = comboColor;
-                ctx.font = 'bold 18px Fredoka One';
-                ctx.textAlign = 'center';
-
-                if (this.combo >= 10) {
-                    ctx.fillText('FRENZY!', GAME_WIDTH - 72, 73);
-                    ctx.fillText(`x${this.getComboMultiplier()}`, GAME_WIDTH - 72, 90);
-                } else {
-                    ctx.fillText(`COMBO x${this.combo}`, GAME_WIDTH - 72, 80);
-                }
+                ctx.font = 'bold 16px Fredoka One';
+                ctx.textAlign = 'right';
+                ctx.fillText(`x${this.combo}`, GAME_CONFIG.WIDTH - 50, 55);
             }
+
+            // Fever gauge
+            this.fever.drawGauge(ctx);
 
             // Villager counter
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.roundRect(ctx, 15, GAME_HEIGHT - 75, 120, 55, 10);
+            ctx.beginPath();
+            ctx.roundRect(10, GAME_CONFIG.HEIGHT - 130, 80, 50, 10);
             ctx.fill();
 
             const vColor = this.villagerCount > 50 ? '#2ecc71' :
                           this.villagerCount > 25 ? '#f39c12' : '#e74c3c';
             ctx.fillStyle = vColor;
-            ctx.font = 'bold 26px Fredoka One';
+            ctx.font = 'bold 22px Fredoka One';
             ctx.textAlign = 'center';
-            ctx.fillText(`${this.villagerCount}`, 75, GAME_HEIGHT - 42);
-            ctx.font = '14px Nunito';
+            ctx.fillText(`${this.villagerCount}`, 50, GAME_CONFIG.HEIGHT - 100);
+            ctx.font = '11px Nunito';
             ctx.fillStyle = '#fff';
-            ctx.fillText('VILLAGERS', 75, GAME_HEIGHT - 25);
+            ctx.fillText('VILLAGERS', 50, GAME_CONFIG.HEIGHT - 85);
 
-            // Timer bar
-            const timerProgress = this.villagerTimer / VILLAGER_CONSUME_INTERVAL;
+            // Timer bar at bottom
+            const consumeInterval = this.fever.active ?
+                GAME_CONFIG.VILLAGER_CONSUME_INTERVAL * 1.5 :
+                GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
+            const timerProgress = this.villagerTimer / consumeInterval;
+
             ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
-            ctx.fillRect(0, GAME_HEIGHT - 8, GAME_WIDTH, 8);
+            ctx.fillRect(0, GAME_CONFIG.HEIGHT - 6, GAME_CONFIG.WIDTH, 6);
             ctx.fillStyle = `rgb(231, ${Math.floor(76 + (1 - timerProgress) * 100)}, 60)`;
-            ctx.fillRect(0, GAME_HEIGHT - 8, GAME_WIDTH * timerProgress, 8);
+            ctx.fillRect(0, GAME_CONFIG.HEIGHT - 6, GAME_CONFIG.WIDTH * timerProgress, 6);
 
-            // Food panel
-            this.drawFoodPanel();
-
-            // Controls
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.font = '13px Nunito';
-            ctx.textAlign = 'center';
-            ctx.fillText('SPACE: Feed | C: Menu | 1-6: Select Food', GAME_WIDTH / 2, GAME_HEIGHT - 12);
+            // Food selector
+            this.drawFoodSelector();
         }
 
-        drawFoodPanel() {
+        drawFoodSelector() {
             const ctx = this.ctx;
-            const panelX = GAME_WIDTH - 190;
-            const panelY = GAME_HEIGHT - 90;
-
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.roundRect(ctx, panelX, panelY, 175, 70, 10);
-            ctx.fill();
+            const startX = 100;
+            const y = GAME_CONFIG.HEIGHT - 130;
+            const spacing = 55;
 
             const foods = Object.entries(FOODS);
-            let col = 0, row = 0;
-
-            foods.forEach(([key, food], index) => {
-                const x = panelX + 15 + col * 55;
-                const y = panelY + 10 + row * 33;
-
+            foods.slice(0, 4).forEach(([key, food], index) => {
+                const x = startX + index * spacing;
                 const isUnlocked = food.unlockLevel <= this.level;
                 const isSelected = key === this.selectedFoodKey;
 
-                if (isSelected && isUnlocked) {
-                    ctx.fillStyle = 'rgba(108, 92, 231, 0.5)';
-                    this.roundRect(ctx, x - 3, y - 3, 50, 28, 5);
-                    ctx.fill();
+                // Background
+                ctx.fillStyle = isSelected ? 'rgba(108, 92, 231, 0.6)' : 'rgba(0, 0, 0, 0.4)';
+                ctx.beginPath();
+                ctx.roundRect(x - 20, y - 5, 45, 45, 8);
+                ctx.fill();
+
+                if (isSelected) {
+                    ctx.strokeStyle = '#a29bfe';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 }
 
-                const img = this.images.get(food.asset);
+                const img = this.assets.get(food.asset);
                 if (img && isUnlocked) {
-                    ctx.drawImage(img, x + 5, y, 35, 22);
+                    ctx.drawImage(img, x - 15, y, 35, 35);
                 } else {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.font = '18px Arial';
+                    ctx.font = '16px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText('🔒', x + 22, y + 18);
+                    ctx.fillText('🔒', x + 2, y + 25);
                 }
-
-                col++;
-                if (col >= 3) { col = 0; row++; }
             });
         }
 
         drawMenuScreen() {
             const ctx = this.ctx;
 
-            this.caiso.draw(ctx, this.images);
+            // Background gradient
+            const grad = ctx.createLinearGradient(0, 0, 0, GAME_CONFIG.HEIGHT);
+            grad.addColorStop(0, '#1a1a2e');
+            grad.addColorStop(0.5, '#16213e');
+            grad.addColorStop(1, '#0f3460');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
+            // Draw Caiso
+            this.caiso.draw(ctx, this.assets);
+
+            // Title
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 52px Fredoka One';
+            ctx.font = 'bold 42px Fredoka One';
             ctx.textAlign = 'center';
             ctx.strokeStyle = '#6c3483';
             ctx.lineWidth = 4;
-            ctx.strokeText('FEEDING CAISO', GAME_WIDTH / 2, 90);
-            ctx.fillText('FEEDING CAISO', GAME_WIDTH / 2, 90);
+            ctx.strokeText('FEEDING', GAME_CONFIG.WIDTH / 2, 420);
+            ctx.fillText('FEEDING', GAME_CONFIG.WIDTH / 2, 420);
+            ctx.strokeText('CAISO', GAME_CONFIG.WIDTH / 2, 470);
+            ctx.fillText('CAISO', GAME_CONFIG.WIDTH / 2, 470);
 
-            ctx.font = 'bold 22px Fredoka One';
+            ctx.font = 'bold 18px Fredoka One';
             ctx.fillStyle = '#9b59b6';
-            ctx.fillText('Save the Villagers!', GAME_WIDTH / 2, 125);
+            ctx.fillText('Save the Villagers!', GAME_CONFIG.WIDTH / 2, 510);
 
+            // Instructions
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            this.roundRect(ctx, GAME_WIDTH / 2 - 220, GAME_HEIGHT - 180, 440, 130, 15);
+            ctx.beginPath();
+            ctx.roundRect(40, 550, GAME_CONFIG.WIDTH - 80, 140, 15);
             ctx.fill();
 
             ctx.fillStyle = '#fff';
-            ctx.font = '17px Nunito';
-            ctx.fillText('Feed Caiso before it eats all the villagers!', GAME_WIDTH / 2, GAME_HEIGHT - 145);
-            ctx.fillText('Reduce hunger to 0% to WIN!', GAME_WIDTH / 2, GAME_HEIGHT - 120);
-            ctx.fillText('Every 2 seconds, Caiso eats a villager...', GAME_WIDTH / 2, GAME_HEIGHT - 95);
+            ctx.font = '14px Nunito';
+            ctx.fillText('Feed Caiso before it eats all villagers!', GAME_CONFIG.WIDTH / 2, 580);
+            ctx.fillText('Reduce hunger to 0% to WIN!', GAME_CONFIG.WIDTH / 2, 605);
+            ctx.fillText('Drag to move, tap FEED to throw food', GAME_CONFIG.WIDTH / 2, 630);
+            ctx.fillText('Build combos for FEVER MODE!', GAME_CONFIG.WIDTH / 2, 655);
 
-            ctx.font = 'bold 26px Fredoka One';
+            // Start prompt
+            ctx.font = 'bold 22px Fredoka One';
             ctx.fillStyle = '#f1c40f';
             const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
             ctx.globalAlpha = pulse;
-            ctx.fillText('PRESS SPACE OR TAP TO START', GAME_WIDTH / 2, GAME_HEIGHT - 55);
+            ctx.fillText('TAP TO START', GAME_CONFIG.WIDTH / 2, 720);
             ctx.globalAlpha = 1;
-        }
-
-        drawPauseMenu() {
-            const ctx = this.ctx;
-
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-            ctx.fillStyle = 'rgba(45, 52, 54, 0.95)';
-            this.roundRect(ctx, GAME_WIDTH / 2 - 200, 80, 400, 400, 20);
-            ctx.fill();
-
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 30px Fredoka One';
-            ctx.textAlign = 'center';
-            ctx.fillText('CHOOSE FOOD', GAME_WIDTH / 2, 130);
-
-            const foods = Object.entries(FOODS);
-            foods.forEach(([key, food], index) => {
-                const y = 180 + index * 50;
-                const isUnlocked = food.unlockLevel <= this.level;
-                const isSelected = key === this.selectedFoodKey;
-
-                ctx.fillStyle = isSelected ? 'rgba(108, 92, 231, 0.5)' : 'rgba(0, 0, 0, 0.3)';
-                this.roundRect(ctx, GAME_WIDTH / 2 - 170, y - 18, 340, 42, 8);
-                ctx.fill();
-
-                const img = this.images.get(food.asset);
-                if (img && isUnlocked) {
-                    ctx.drawImage(img, GAME_WIDTH / 2 - 155, y - 12, 40, 30);
-                } else {
-                    ctx.fillStyle = '#666';
-                    ctx.font = '22px Arial';
-                    ctx.textAlign = 'left';
-                    ctx.fillText('🔒', GAME_WIDTH / 2 - 150, y + 8);
-                }
-
-                ctx.font = '17px Nunito';
-                ctx.textAlign = 'left';
-                ctx.fillStyle = isUnlocked ? '#fff' : '#666';
-                ctx.fillText(food.name, GAME_WIDTH / 2 - 100, y + 6);
-
-                ctx.textAlign = 'right';
-                if (isUnlocked) {
-                    ctx.fillStyle = '#2ecc71';
-                    ctx.fillText(`-${food.hungerReduction}%`, GAME_WIDTH / 2 + 90, y + 6);
-                    ctx.fillStyle = '#a29bfe';
-                    ctx.fillText(`[${food.key}]`, GAME_WIDTH / 2 + 150, y + 6);
-                } else {
-                    ctx.fillStyle = '#e74c3c';
-                    ctx.fillText(`Lv.${food.unlockLevel}`, GAME_WIDTH / 2 + 150, y + 6);
-                }
-            });
-
-            ctx.fillStyle = '#a29bfe';
-            ctx.font = '16px Nunito';
-            ctx.textAlign = 'center';
-            ctx.fillText('Press C to close', GAME_WIDTH / 2, 470);
         }
 
         drawGameOverScreen() {
             const ctx = this.ctx;
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
             this.caiso.expression = 'sad';
-            this.caiso.draw(ctx, this.images);
+            this.caiso.draw(ctx, this.assets);
 
             ctx.fillStyle = '#e74c3c';
-            ctx.font = 'bold 54px Fredoka One';
+            ctx.font = 'bold 48px Fredoka One';
             ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', GAME_WIDTH / 2, 90);
+            ctx.fillText('GAME OVER', GAME_CONFIG.WIDTH / 2, 400);
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.roundRect(ctx, GAME_WIDTH / 2 - 150, GAME_HEIGHT - 200, 300, 110, 15);
+            ctx.beginPath();
+            ctx.roundRect(80, 450, GAME_CONFIG.WIDTH - 160, 140, 15);
             ctx.fill();
 
             ctx.fillStyle = '#fff';
-            ctx.font = '18px Nunito';
-            ctx.fillText(`Final Level: ${this.level}`, GAME_WIDTH / 2, GAME_HEIGHT - 165);
-            ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_WIDTH / 2, GAME_HEIGHT - 140);
-            ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_WIDTH / 2, GAME_HEIGHT - 115);
+            ctx.font = '16px Nunito';
+            ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 485);
+            ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 515);
+            ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 545);
+            ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 575);
 
-            ctx.font = 'bold 24px Fredoka One';
+            ctx.font = 'bold 20px Fredoka One';
             ctx.fillStyle = '#f1c40f';
-            ctx.fillText('PRESS R OR TAP TO RETRY', GAME_WIDTH / 2, GAME_HEIGHT - 50);
+            ctx.fillText('TAP TO RETRY', GAME_CONFIG.WIDTH / 2, 650);
         }
 
         drawVictoryScreen() {
             const ctx = this.ctx;
 
             ctx.fillStyle = 'rgba(46, 204, 113, 0.25)';
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
-            // Particles
+            // Victory particles
             this.particles.forEach(p => {
-                ctx.globalAlpha = p.life / 60;
+                ctx.globalAlpha = p.life / 55;
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -1445,42 +1653,44 @@
             ctx.globalAlpha = 1;
 
             this.caiso.expression = 'happy';
-            this.caiso.draw(ctx, this.images);
+            this.caiso.draw(ctx, this.assets);
 
             ctx.fillStyle = '#2ecc71';
-            ctx.font = 'bold 54px Fredoka One';
+            ctx.font = 'bold 48px Fredoka One';
             ctx.textAlign = 'center';
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 3;
-            ctx.strokeText('YOU WIN!', GAME_WIDTH / 2, 90);
-            ctx.fillText('YOU WIN!', GAME_WIDTH / 2, 90);
+            ctx.strokeText('YOU WIN!', GAME_CONFIG.WIDTH / 2, 400);
+            ctx.fillText('YOU WIN!', GAME_CONFIG.WIDTH / 2, 400);
 
             ctx.fillStyle = '#f1c40f';
-            ctx.font = 'bold 22px Fredoka One';
-            ctx.fillText('Caiso is full! Villagers are safe!', GAME_WIDTH / 2, 125);
+            ctx.font = 'bold 18px Fredoka One';
+            ctx.fillText('Caiso is full! Villagers are safe!', GAME_CONFIG.WIDTH / 2, 440);
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.roundRect(ctx, GAME_WIDTH / 2 - 150, GAME_HEIGHT - 200, 300, 130, 15);
+            ctx.beginPath();
+            ctx.roundRect(80, 470, GAME_CONFIG.WIDTH - 160, 160, 15);
             ctx.fill();
 
             ctx.fillStyle = '#fff';
-            ctx.font = '18px Nunito';
-            ctx.fillText(`Final Level: ${this.level}`, GAME_WIDTH / 2, GAME_HEIGHT - 165);
-            ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_WIDTH / 2, GAME_HEIGHT - 140);
-            ctx.fillText(`Villagers Saved: ${this.villagerCount}`, GAME_WIDTH / 2, GAME_HEIGHT - 115);
-            ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_WIDTH / 2, GAME_HEIGHT - 90);
+            ctx.font = '16px Nunito';
+            ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 505);
+            ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 535);
+            ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 565);
+            ctx.fillText(`Villagers Saved: ${this.villagerCount}`, GAME_CONFIG.WIDTH / 2, 595);
+            ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 620);
 
-            ctx.font = 'bold 24px Fredoka One';
+            ctx.font = 'bold 20px Fredoka One';
             ctx.fillStyle = '#f1c40f';
-            ctx.fillText('PRESS R OR TAP TO PLAY AGAIN', GAME_WIDTH / 2, GAME_HEIGHT - 40);
+            ctx.fillText('TAP TO PLAY AGAIN', GAME_CONFIG.WIDTH / 2, 680);
 
             // Celebration particles
-            if (Math.random() < 0.15) {
+            if (Math.random() < 0.12) {
                 this.addParticles(
-                    Math.random() * GAME_WIDTH,
-                    Math.random() * GAME_HEIGHT / 2,
-                    ['#f1c40f', '#2ecc71', '#e74c3c', '#9b59b6'][Math.floor(Math.random() * 4)],
-                    5
+                    Math.random() * GAME_CONFIG.WIDTH,
+                    Math.random() * GAME_CONFIG.HEIGHT / 2,
+                    ['#f1c40f', '#2ecc71', '#e74c3c', '#9b59b6', '#3498db'][Math.floor(Math.random() * 5)],
+                    4
                 );
             }
         }
@@ -1488,25 +1698,11 @@
         drawLoadingScreen() {
             const ctx = this.ctx;
             ctx.fillStyle = '#1a1a2e';
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
             ctx.fillStyle = '#a29bfe';
-            ctx.font = '32px Fredoka One';
+            ctx.font = '28px Fredoka One';
             ctx.textAlign = 'center';
-            ctx.fillText('Loading...', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-        }
-
-        roundRect(ctx, x, y, w, h, r) {
-            ctx.beginPath();
-            ctx.moveTo(x + r, y);
-            ctx.lineTo(x + w - r, y);
-            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-            ctx.lineTo(x + w, y + h - r);
-            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-            ctx.lineTo(x + r, y + h);
-            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-            ctx.lineTo(x, y + r);
-            ctx.quadraticCurveTo(x, y, x + r, y);
-            ctx.closePath();
+            ctx.fillText('Loading...', GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2);
         }
 
         gameLoop(timestamp) {
