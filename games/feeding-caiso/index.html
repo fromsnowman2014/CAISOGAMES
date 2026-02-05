@@ -437,6 +437,74 @@
         }
 
         // ============================================
+        // AUDIO MANAGER (Web Audio API)
+        // ============================================
+        class AudioManager {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.enabled = true;
+                this.masterVolume = 0.5;
+            }
+
+            play(soundName) {
+                if (!this.enabled) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                const osc = this.ctx.createOscillator();
+                const gainNode = this.ctx.createGain();
+
+                osc.connect(gainNode);
+                gainNode.connect(this.ctx.destination);
+
+                const now = this.ctx.currentTime;
+
+                switch (soundName) {
+                    case 'throw':
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(400, now);
+                        osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                        gainNode.gain.setValueAtTime(0.3 * this.masterVolume, now);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                        osc.start(now);
+                        osc.stop(now + 0.1);
+                        break;
+
+                    case 'eat':
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(300, now);
+                        osc.frequency.linearRampToValueAtTime(500, now + 0.1);
+                        osc.frequency.linearRampToValueAtTime(200, now + 0.2);
+                        gainNode.gain.setValueAtTime(0.5 * this.masterVolume, now);
+                        gainNode.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                        osc.start(now);
+                        osc.stop(now + 0.2);
+                        break;
+
+                    case 'levelup':
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(440, now);
+                        osc.frequency.setValueAtTime(554, now + 0.1);
+                        osc.frequency.setValueAtTime(659, now + 0.2);
+                        gainNode.gain.setValueAtTime(0.3 * this.masterVolume, now);
+                        gainNode.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                        osc.start(now);
+                        osc.stop(now + 0.4);
+                        break;
+
+                    case 'gameover':
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(200, now);
+                        osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+                        gainNode.gain.setValueAtTime(0.4 * this.masterVolume, now);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                        osc.start(now);
+                        osc.stop(now + 0.5);
+                        break;
+                }
+            }
+        }
+
+        // ============================================
         // PARALLAX BACKGROUND
         // ============================================
         class ParallaxBackground {
@@ -1073,6 +1141,7 @@
                 this.canvas.height = GAME_CONFIG.HEIGHT;
 
                 this.assets = new AssetLoader();
+                this.audio = new AudioManager(); // Added Audio Manager
                 this.state = 'loading';
                 this.hunger = 100;
                 this.villagerCount = 100;
@@ -1136,6 +1205,11 @@
             handleClick(e) {
                 if (this.state === 'menu') this.startGame();
                 else if (this.state === 'gameover' || this.state === 'victory') this.startGame();
+
+                // Allow audio context to resume on first user interaction
+                if (this.audio && this.audio.ctx.state === 'suspended') {
+                    this.audio.ctx.resume();
+                }
             }
 
             selectFoodByKey(key) {
@@ -1145,6 +1219,7 @@
                     const [foodKey, food] = foodEntries[index];
                     if (food.unlockLevel <= this.level) {
                         this.selectedFoodKey = foodKey;
+                        // Optional: play click sound
                     }
                 }
             }
@@ -1172,6 +1247,11 @@
                 for (let i = 0; i < 12; i++) {
                     this.spawnVillager(i);
                 }
+
+                // Resume audio if needed
+                if (this.audio && this.audio.ctx.state === 'suspended') {
+                    this.audio.ctx.resume();
+                }
             }
 
             spawnVillager(id) {
@@ -1185,6 +1265,7 @@
                 if (food.unlockLevel > this.level) return;
 
                 this.player.throw();
+                this.audio.play('throw'); // Play throw sound
 
                 const mouthPos = this.caiso.getMouthPosition();
                 this.flyingFoods.push(new FlyingFood(
@@ -1222,6 +1303,7 @@
                     const tier = EVOLUTION_TIERS[this.caiso.evolutionTier];
                     this.addFloatingText(`EVOLVED: ${tier.name}!`, GAME_CONFIG.WIDTH / 2, 200, '#ff006e');
                     this.addParticles(GAME_CONFIG.WIDTH / 2, 180, '#ff006e', 35);
+                    this.audio.play('levelup'); // Play evolution sound (re-use levelup)
                 }
 
                 const mouthPos = this.caiso.getMouthPosition();
@@ -1235,11 +1317,13 @@
 
                 this.addParticles(mouthPos.x, mouthPos.y, food.color, 15);
                 this.caiso.eat();
+                this.audio.play('eat'); // Play eat sound
 
                 if (this.hunger <= 0) {
                     this.state = 'victory';
                     this.caiso.expression = 'happy';
                     this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#ffd700', 60);
+                    this.audio.play('levelup'); // Victory sound
                 }
             }
 
@@ -1247,6 +1331,7 @@
                 this.level = newLevel;
                 this.addFloatingText(`LEVEL ${newLevel}!`, GAME_CONFIG.WIDTH / 2, 120, '#00d2d3');
                 this.addParticles(GAME_CONFIG.WIDTH / 2, 100, '#00d2d3', 25);
+                this.audio.play('levelup'); // Play levelup sound
 
                 Object.entries(FOODS).forEach(([key, food]) => {
                     if (food.unlockLevel === newLevel) {
@@ -1292,6 +1377,7 @@
                     if (this.villagerCount <= 0) {
                         this.state = 'gameover';
                         this.caiso.expression = 'sad';
+                        this.audio.play('gameover'); // Play gameover sound
                     }
                 }
             }
