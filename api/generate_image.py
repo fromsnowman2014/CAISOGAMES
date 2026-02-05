@@ -26,14 +26,14 @@ Returns:
 import os
 import json
 import base64
-import ssl
 from http.server import BaseHTTPRequestHandler
 import httpx
 
 # Gemini API configuration
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-IMAGEN_MODEL = "imagen-3.0-generate-001"
+# Use Gemini native image generation model (works with v1beta API)
+MODEL = "gemini-2.0-flash-exp-image-generation"
 
 
 def get_style_prompt(style: str) -> str:
@@ -48,41 +48,25 @@ def get_style_prompt(style: str) -> str:
     return styles.get(style, styles['pixel_art'])
 
 
-def get_aspect_ratio(width: int, height: int) -> str:
-    """Get aspect ratio string from dimensions."""
-    ratio = width / height
-    if ratio > 1.6:
-        return "16:9"
-    elif ratio > 1.2:
-        return "4:3"
-    elif ratio < 0.6:
-        return "9:16"
-    elif ratio < 0.8:
-        return "3:4"
-    else:
-        return "1:1"
-
-
 async def generate_image(prompt: str, width: int = 512, height: int = 512, style: str = 'pixel_art'):
-    """Generate image using Gemini Imagen API."""
+    """Generate image using Gemini image generation API."""
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY not configured")
 
     style_prompt = get_style_prompt(style)
     full_prompt = f"{prompt}. {style_prompt}"
 
-    url = f"{BASE_URL}/models/{IMAGEN_MODEL}:predict"
-    aspect_ratio = get_aspect_ratio(width, height)
+    # Use generateContent endpoint with image generation model
+    url = f"{BASE_URL}/models/{MODEL}:generateContent"
 
     payload = {
-        "instances": [{
-            "prompt": full_prompt
+        "contents": [{
+            "parts": [{
+                "text": full_prompt
+            }]
         }],
-        "parameters": {
-            "sampleCount": 1,
-            "aspectRatio": aspect_ratio,
-            "personGeneration": "allow_adult",
-            "safetySetting": "block_only_high"
+        "generationConfig": {
+            "responseModalities": ["image", "text"]
         }
     }
 
@@ -98,21 +82,34 @@ async def generate_image(prompt: str, width: int = 512, height: int = 512, style
             error_msg = error_data.get('error', {}).get('message', 'Bad request')
             raise Exception(f"Bad request: {error_msg}")
         elif response.status_code != 200:
-            raise Exception(f"API error: {response.status_code}")
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', f'Status {response.status_code}')
+            except:
+                error_msg = f"Status {response.status_code}"
+            raise Exception(f"API error: {error_msg}")
 
         data = response.json()
-        predictions = data.get('predictions', [])
+        
+        # Parse the generateContent response
+        candidates = data.get('candidates', [])
+        for candidate in candidates:
+            content = candidate.get('content', {})
+            parts = content.get('parts', [])
+            for part in parts:
+                # Check for inline image data (inlineData format)
+                if 'inlineData' in part:
+                    inline_data = part['inlineData']
+                    image_data = inline_data.get('data', '')
+                    mime_type = inline_data.get('mimeType', 'image/png')
+                    return {
+                        'image': image_data,
+                        'format': mime_type.split('/')[-1] if '/' in mime_type else 'png',
+                        'width': width,
+                        'height': height
+                    }
 
-        for pred in predictions:
-            if 'bytesBase64Encoded' in pred:
-                return {
-                    'image': pred['bytesBase64Encoded'],
-                    'format': 'png',
-                    'width': width,
-                    'height': height
-                }
-
-        raise Exception("No image generated")
+        raise Exception("No image generated in response")
 
 
 class handler(BaseHTTPRequestHandler):
@@ -179,5 +176,6 @@ class handler(BaseHTTPRequestHandler):
             'status': 'ok',
             'endpoint': '/api/generate-image',
             'method': 'POST',
+            'model': MODEL,
             'api_configured': bool(GEMINI_API_KEY)
         }).encode())
