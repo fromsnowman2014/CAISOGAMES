@@ -7,6 +7,8 @@ This module provides:
 3. Procedural SFX generation (Web Audio API)
 4. BGM generation (Tone.js)
 5. Integration code generation
+
+Uses SoundMakerService (Vercel API) when available, falls back to local LLM.
 """
 
 import os
@@ -15,14 +17,21 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 
-# Reuse LLM service from design_agent
+# Path setup
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# Try to import sound_maker service (Vercel API client)
+try:
+    from agents.sound_agent.generators.sound_maker import SoundMakerService
+    SOUND_MAKER_AVAILABLE = True
+except ImportError:
+    SOUND_MAKER_AVAILABLE = False
+
+# Fallback to LLM service
 try:
     from agents.design_agent.utils.llm import LLMService
 except ImportError:
-    # Fallback if design_agent not available
     from agents.sound_agent.utils.llm import LLMService
 
 
@@ -55,17 +64,37 @@ class SoundAgent:
     3. Generate procedural SFX code
     4. Generate BGM code
     5. Create integration snippets
+    
+    Uses SoundMakerService (Vercel API) when available, falls back to local LLM.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, use_api: bool = True):
         """
         Initialize the Sound Agent.
         
         Args:
             api_key: Gemini API key (uses env var if not provided)
+            use_api: Whether to use Vercel API (True) or local LLM (False)
         """
-        self.llm = LLMService(api_key=api_key)
         self.prompts_dir = Path(__file__).parent / "prompts"
+        self.use_sound_maker = False
+        
+        # Try to use SoundMakerService if available and requested
+        if use_api and SOUND_MAKER_AVAILABLE:
+            try:
+                self.sound_maker = SoundMakerService()
+                health = self.sound_maker.check_health()
+                if health.get('status') == 'ok' and health.get('api_configured'):
+                    self.use_sound_maker = True
+                    print("✅ Using SoundMaker API (Vercel)")
+                else:
+                    print("⚠️ SoundMaker API not configured, using local LLM")
+            except Exception as e:
+                print(f"⚠️ SoundMaker API unavailable: {e}")
+        
+        # Fallback to local LLM
+        if not self.use_sound_maker:
+            self.llm = LLMService(api_key=api_key)
         
     def load_prompt(self, name: str) -> str:
         """Load a prompt template by name."""
@@ -190,6 +219,19 @@ class SoundAgent:
         """
         print(f"🔊 Generating SFX: {requirement.name}...")
         
+        # Use SoundMaker API if available
+        if self.use_sound_maker:
+            try:
+                return self.sound_maker.generate_sfx(
+                    name=requirement.name,
+                    description=requirement.description,
+                    duration=requirement.duration_ms,
+                    category=requirement.category
+                )
+            except Exception as e:
+                print(f"⚠️ API error, falling back to local: {e}")
+        
+        # Fallback to local LLM
         prompt_template = self.load_prompt("generate_sfx")
         prompt = prompt_template.replace("{sound_name}", requirement.name)
         prompt = prompt.replace("{description}", requirement.description)
@@ -214,6 +256,19 @@ class SoundAgent:
         """
         print(f"🎵 Generating BGM: {track_name}...")
         
+        # Use SoundMaker API if available
+        if self.use_sound_maker:
+            try:
+                return self.sound_maker.generate_bgm(
+                    track_name=track_name,
+                    scene=scene,
+                    mood=mood,
+                    tempo=tempo
+                )
+            except Exception as e:
+                print(f"⚠️ API error, falling back to local: {e}")
+        
+        # Fallback to local LLM
         prompt_template = self.load_prompt("generate_bgm")
         prompt = prompt_template.replace("{track_name}", track_name)
         prompt = prompt.replace("{scene}", scene)
