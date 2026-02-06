@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Feeding Caiso - Save the Villagers!</title>
+    <title>Feeding Caiso v3.1 - Phase 3</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap"
         rel="stylesheet">
     <style>
@@ -30,6 +30,16 @@
             justify-content: center;
             align-items: center;
             font-family: 'Nunito', sans-serif;
+        }
+
+        #version-indicator {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            z-index: 9999;
+            pointer-events: none;
         }
 
         /* Portrait Container (9:16) - Mobile First */
@@ -185,6 +195,7 @@
 
 <body>
     <div id="gameContainer">
+        <div id="version-indicator">v3.1 - Phase 3</div>
         <a href="../../" id="backBtn">
             <svg viewBox="0 0 24 24">
                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
@@ -1174,6 +1185,7 @@
             }
 
             async init() {
+                console.log("Feeding Caiso v3.1 - Phase 3 (Purple Monster + Audio) Loaded");
                 await this.assets.loadAll();
                 this.background = new ParallaxBackground(this.assets);
                 this.state = 'menu';
