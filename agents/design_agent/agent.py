@@ -8,8 +8,8 @@ try:
 except ImportError:
     # Allow running directly for testing
     import sys
-    sys.path.append(str(Path(__file__).parent.parent))
-    from design_agent.utils.llm import LLMService
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from agents.design_agent.utils.llm import LLMService
 
 class DesignAgent:
     """

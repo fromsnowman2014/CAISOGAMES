@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 
 # Add parent directory to path to allow imports
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from design_agent.agent import DesignAgent
+from agents.design_agent.agent import DesignAgent
 
 def main():
     if len(sys.argv) < 2:
