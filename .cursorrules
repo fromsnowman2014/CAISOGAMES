@@ -1,0 +1,54 @@
+# Cursor Rules for Caiso Games
+
+You are working on the Caiso Games repository, which includes a suite of specialized AI Agents.
+When the user asks for "reviews", "audits", "assets", or "testing", PREFER using the available agents over manual work.
+
+## 🤖 Available Agents & Commands
+
+### 1. Image Agent (Asset Generation)
+Use this to generate sprites, backgrounds, and UI elements.
+- **Command:** `python agents/image_agent/cli.py generate --desc "<description>" --type <sprite|background|ui> --style <style> --output <path>`
+- **Styles:** `kawaii` (default), `pixel_art`, `retro_8bit`, `realistic`, `cartoon`
+- **Example:** `python agents/image_agent/cli.py generate --desc "Golden coin" --size 32x32 --output assets/coin.png`
+
+### 2. Sound Agent (Audio Audit & Generation)
+Use this to analyze game audio and generate SFX/BGM code.
+- **Command:** `python agents/sound_agent/agent.py <path_to_index.html>`
+- **Output:** `docs/<game>_sound_audit.md` (contains JS code for sounds)
+
+### 3. Design Agent (Game Design & Balance)
+Use this to critique game mechanics, balance, and narrative.
+- **Command:** `python agents/design_agent/agent.py <path_to_index.html>`
+- **Output:** `docs/<game>_design_review.md`
+
+### 4. Code Agent (Code Quality & Performance)
+Use this to checking structure, performance, and mobile support.
+- **Command:** `python agents/code_agent/agent.py <path_to_index.html>`
+- **Output:** `docs/<game>_code_review.md`
+
+### 5. Play Agent (QA & Testing)
+Use this to run automated gameplay tests.
+- **Command:** `python agents/play_agent/agent.py <path_to_index.html>`
+- **Output:** `docs/<game>_qa_report.md`
+
+## 🧠 specific Behavior Rules for Cursor
+
+- **When User asks to "Audit" or "Review" a game:**
+  - Suggest running the `Code Agent` and `Design Agent`.
+  - Example: "I can run the Code and Design agents to audit 'feeding-caiso'. Shall I proceed?"
+
+- **When User asks for "New Features" or "Mechanics":**
+  - Suggest running the `Design Agent` first to check for balance implications.
+
+- **When User asks for "Assets" (Images/Sounds):**
+  - Use `Image Agent` for visuals.
+  - Use `Sound Agent` for audio code.
+  - DO NOT manually write base64 strings unless explicitly asked. Prefer generating files.
+
+- **When User asks to "Test" the game:**
+  - Suggest running the `Play Agent`.
+
+## 📂 File Structure Context
+- `games/<game-name>/` contains the game source.
+- `agents/` contains the AI toolchain.
+- `docs/` is where reports are saved.
