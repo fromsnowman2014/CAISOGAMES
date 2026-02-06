@@ -7,14 +7,17 @@ This directory contains modular AI agents for game development automation.
 | Agent | Description | Status |
 |-------|-------------|--------|
 | **design_agent** | Analyzes game code for mechanics, balance, and narrative | ✅ Ready |
-| **image_agent** | Generates game assets using AI image APIs | ✅ Ready |
+| **image_agent** | Generates game assets using AI image APIs | ✅ Ready (v1.1) |
 
-## Usage
+## Planned Agents
 
-### Design Agent
-```bash
-python -m agents.design_agent games/your-game/index.html
-```
+| Agent | Description | Status |
+|-------|-------------|--------|
+| **play_agent** | Automated gameplay testing via Playwright | 🔜 Planned |
+| **sound_agent** | Audio generation and integration | 🔜 Planned |
+| **code_agent** | Code improvement suggestions | 🔜 Planned |
+| **review_agent** | Quality and UX review | 🔜 Planned |
+| **orchestrator** | Pipeline automation | 🔜 Planned |
 
 ### Image Agent
 ```bash
