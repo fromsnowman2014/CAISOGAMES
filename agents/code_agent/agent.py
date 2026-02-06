@@ -1,40 +1,47 @@
 import os
-import glob
+import sys
+import json
+import urllib.request
+import urllib.error
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-try:
-    from .utils.llm import LLMService
-except ImportError:
-    # Allow running directly for testing
-    import sys
-    sys.path.append(str(Path(__file__).parent.parent.parent))
-    from agents.code_agent.utils.llm import LLMService
-
 class CodeAgent:
     """
-    Code Agent: Analyzes game code structure, performance, and portability.
+    Code Agent: Analyzes game code structure, performance, and portability via Vercel API.
     """
     
-    def __init__(self, config_path: str = "config.yaml"):
-        # Load config (Mock implementation for zero-dependency)
-        self.config = {
-            "model_name": os.environ.get("AGENT_MODEL_NAME", "gemini-1.5-flash"),
-            "max_tokens": int(os.environ.get("AGENT_MAX_TOKENS", 4000)),
-            "output_dir": os.environ.get("AGENT_OUTPUT_DIR", "docs"),
+    def __init__(self, output_dir: str = "docs"):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        # Default to production URL if not set
+        self.api_base_url = os.environ.get("VERCEL_APP_URL", "https://caisogames.vercel.app").rstrip("/")
+        self.api_endpoint = f"{self.api_base_url}/api/analyze-code"
+        
+    def _call_api(self, code: str, analysis_type: str) -> str:
+        """Call Vercel Serverless Function to analyze code."""
+        payload = {
+            "type": analysis_type,
+            "code": code
         }
         
-        self.llm = LLMService(model=self.config["model_name"])
-        self.prompts_dir = Path(__file__).parent / "prompts"
-        
-    def load_prompt(self, name: str) -> str:
-        """Load a prompt template from file."""
-        path = self.prompts_dir / f"{name}.txt"
-        if not path.exists():
-            # Create default prompt if missing (for resilience)
-            return f"Analyze the following code for {name}:\n\n{{{{ source_code }}}}"
-        return path.read_text(encoding="utf-8")
-        
+        try:
+            req = urllib.request.Request(
+                self.api_endpoint,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'}
+            )
+            with urllib.request.urlopen(req) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                if result.get("success"):
+                    return result.get("analysis", "No analysis returned.")
+                else:
+                    return f"API Error: {result.get('error')}"
+        except urllib.error.URLError as e:
+            return f"Network Error ({self.api_endpoint}): {str(e)}"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
     def analyze(self, game_path: str) -> str:
         """
         Run full code analysis on a game file.
@@ -48,22 +55,16 @@ class CodeAgent:
         source_code = game_path_obj.read_text(encoding="utf-8")
         
         # 1. Analyze Structure
-        print("🏗️ Phase 1: Analyzing Code Structure...")
-        structure_prompt = self.load_prompt("analyze_structure")
-        structure_prompt = structure_prompt.replace("{{ source_code }}", source_code[:20000])
-        structure_analysis = self.llm.generate(structure_prompt)
+        print("🏗️ Phase 1: Analyzing Code Structure (Cloud)...")
+        structure_analysis = self._call_api(source_code, "structure")
         
         # 2. Performance Audit
-        print("⚡ Phase 2: Auditing Performance...")
-        perf_prompt = self.load_prompt("optimize_performance")
-        perf_prompt = perf_prompt.replace("{{ source_code }}", source_code[:20000])
-        perf_report = self.llm.generate(perf_prompt)
+        print("⚡ Phase 2: Auditing Performance (Cloud)...")
+        perf_report = self._call_api(source_code, "performance")
         
         # 3. Mobile Support
-        print("📱 Phase 3: Assessing Mobile Support...")
-        mobile_prompt = self.load_prompt("mobile_support")
-        mobile_prompt = mobile_prompt.replace("{{ source_code }}", source_code[:20000])
-        mobile_analysis = self.llm.generate(mobile_prompt)
+        print("📱 Phase 3: Assessing Mobile Support (Cloud)...")
+        mobile_analysis = self._call_api(source_code, "mobile")
         
         # 4. Compile Report
         print("📝 Phase 4: Compiling Report...")
@@ -71,9 +72,7 @@ class CodeAgent:
         report_content = self._compile_report(game_name, structure_analysis, perf_report, mobile_analysis)
         
         # Save Report
-        output_dir = Path(self.config["output_dir"])
-        output_dir.mkdir(parents=True, exist_ok=True)
-        report_path = output_dir / f"{game_name}_code_review.md"
+        report_path = self.output_dir / f"{game_name}_code_review.md"
         report_path.write_text(report_content, encoding="utf-8")
         
         print(f"✅ Code Review Saved: {report_path}")
@@ -85,6 +84,7 @@ class CodeAgent:
         
 > **Generated by Code Agent**
 > Date: {os.environ.get('DATE', 'Today')}
+> Source: Vercel Cloud API
 
 ---
 
@@ -110,8 +110,6 @@ class CodeAgent:
 """
 
 if __name__ == "__main__":
-    # Test run
-    import sys
     if len(sys.argv) > 1:
         agent = CodeAgent()
         agent.analyze(sys.argv[1])

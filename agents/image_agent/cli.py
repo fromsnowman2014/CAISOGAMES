@@ -88,7 +88,7 @@ def create_parser() -> argparse.ArgumentParser:
 
 async def cmd_generate(args) -> int:
     """Handle generate command"""
-    from image_agent import ImageAgent, AssetRequest
+    from agents.image_agent import ImageAgent, AssetRequest
     from agents.image_agent.core.data_classes import AssetType, StyleType
 
     # Build request
@@ -150,7 +150,7 @@ async def cmd_generate(args) -> int:
 async def cmd_review(args) -> int:
     """Handle review command"""
     from PIL import Image
-    from image_agent import AssetRequest
+    from agents.image_agent import AssetRequest
     from agents.image_agent.core.data_classes import AssetType, StyleType
     from agents.image_agent.reviewers.quality_reviewer import QualityReviewer
 
@@ -231,7 +231,7 @@ async def cmd_review(args) -> int:
 async def cmd_batch(args) -> int:
     """Handle batch command"""
     import yaml
-    from image_agent import ImageAgent, AssetRequest
+    from agents.image_agent import ImageAgent, AssetRequest
     from agents.image_agent.core.data_classes import AssetType, StyleType
 
     config_path = Path(args.config)
