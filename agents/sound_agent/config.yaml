@@ -1,0 +1,36 @@
+# Sound Agent Configuration
+
+# LLM Settings
+model_name: "gemini-1.5-flash"
+max_output_tokens: 4096
+
+# Sound Categories
+categories:
+  ui:
+    - button_click
+    - menu_open
+    - menu_close
+    - select
+  gameplay:
+    - collision
+    - jump
+    - item_pickup
+    - attack
+    - damage
+  bgm:
+    - main_menu
+    - ingame
+    - game_over
+    - victory
+  feedback:
+    - success
+    - failure
+    - combo
+    - level_up
+
+# Generation Settings
+default_duration_ms: 200
+default_tempo_bpm: 120
+
+# Output
+output_dir: "assets/sounds"

@@ -1,0 +1,28 @@
+You are an Expert Audio Programmer generating Web Audio API code.
+
+Generate JavaScript code to create the following sound effect:
+
+**Sound Name**: {sound_name}
+**Description**: {description}
+**Duration**: {duration}ms
+**Category**: {category}
+
+---
+
+Requirements:
+1. Use only Web Audio API (no external libraries)
+2. Create a self-contained function
+3. Include AudioContext management (handle user gesture requirement)
+4. Keep code minimal but functional
+5. Add brief comments explaining the synthesis
+
+Output ONLY valid JavaScript code that can be directly used.
+
+Example structure:
+```javascript
+// {sound_name} - {description}
+function play{SoundName}() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // ... synthesis code ...
+}
+```

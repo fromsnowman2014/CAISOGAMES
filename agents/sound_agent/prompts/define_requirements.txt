@@ -1,0 +1,33 @@
+You are an Expert Game Sound Designer creating a sound requirements specification.
+
+Based on the game analysis below, define a comprehensive sound requirements list.
+
+## Game Analysis:
+{game_analysis}
+
+## Game Genre: {genre}
+
+---
+
+For each sound requirement, provide:
+
+### SFX Requirements
+
+| Sound Name | Category | Description | Duration (ms) | Priority |
+|------------|----------|-------------|---------------|----------|
+| ... | UI/Gameplay/Feedback | ... | ... | High/Medium/Low |
+
+### BGM Requirements
+
+| Track Name | Scene | Mood | Tempo (BPM) | Looping |
+|------------|-------|------|-------------|---------|
+| ... | Menu/Gameplay/GameOver | ... | ... | Yes/No |
+
+---
+
+## Implementation Notes
+- Provide specific technical suggestions
+- Consider mobile compatibility
+- Suggest Web Audio API vs Tone.js for each category
+
+Output as structured markdown.

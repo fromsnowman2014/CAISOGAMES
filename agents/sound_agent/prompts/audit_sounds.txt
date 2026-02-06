@@ -1,0 +1,33 @@
+You are an Expert Game Sound Designer analyzing a game's audio implementation.
+
+Analyze the following game source code and identify:
+
+## 1. Existing Audio Implementation
+- Any <audio> tags or Audio() objects
+- Web Audio API usage
+- Sound file references (.mp3, .wav, .ogg)
+- Volume controls or audio settings
+
+## 2. Game Events Needing Sounds
+Identify all events in the code that would benefit from sound effects:
+- User interactions (clicks, touches, keypresses)
+- Game state changes (start, pause, game over)
+- Object interactions (collisions, pickups, spawns)
+- Feedback moments (success, failure, achievements)
+
+## 3. Sound Gap Analysis
+List specific sounds that are MISSING but would significantly improve the game experience.
+
+## 4. Sound Priority List
+Rank the top 5 most important missing sounds by impact on player experience.
+
+---
+
+**Game Source Code:**
+```html
+{source_code}
+```
+
+---
+
+Provide your analysis in markdown format with clear sections.

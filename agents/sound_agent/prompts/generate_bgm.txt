@@ -1,0 +1,41 @@
+You are an Expert Music Programmer generating Tone.js background music code.
+
+Generate JavaScript code to create the following background music:
+
+**Track Name**: {track_name}
+**Scene**: {scene}
+**Mood**: {mood}
+**Tempo**: {tempo} BPM
+**Looping**: {looping}
+
+---
+
+Requirements:
+1. Use Tone.js library
+2. Create a loopable pattern
+3. Include start/stop functions
+4. Keep it simple but musically interesting
+5. Use 2-3 instrument layers maximum
+6. Include volume control
+
+Output ONLY valid JavaScript code that works with Tone.js.
+
+Example structure:
+```javascript
+// {track_name} - {mood} BGM for {scene}
+// Requires: <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+class {TrackName}BGM {
+    constructor() {
+        // Initialize synths and patterns
+    }
+    
+    start() {
+        Tone.Transport.start();
+    }
+    
+    stop() {
+        Tone.Transport.stop();
+    }
+}
+```

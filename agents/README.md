@@ -8,13 +8,13 @@ This directory contains modular AI agents for game development automation.
 |-------|-------------|--------|
 | **design_agent** | Analyzes game code for mechanics, balance, and narrative | ✅ Ready |
 | **image_agent** | Generates game assets using AI image APIs | ✅ Ready (v1.1) |
+| **sound_agent** | Analyzes and generates game audio/music | ✅ Ready |
 
 ## Planned Agents
 
 | Agent | Description | Status |
 |-------|-------------|--------|
 | **play_agent** | Automated gameplay testing via Playwright | 🔜 Planned |
-| **sound_agent** | Audio generation and integration | 🔜 Planned |
 | **code_agent** | Code improvement suggestions | 🔜 Planned |
 | **review_agent** | Quality and UX review | 🔜 Planned |
 | **orchestrator** | Pipeline automation | 🔜 Planned |
