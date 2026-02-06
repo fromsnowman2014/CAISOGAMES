@@ -78,7 +78,11 @@ class QualityReviewer:
         )
 
         # 1. Transparency check
-        if request.transparency:
+        # Backgrounds should NOT be transparent - they fill the entire frame
+        from image_agent.core.data_classes import AssetType
+        is_background = request.asset_type == AssetType.BACKGROUND
+
+        if request.transparency and not is_background:
             trans_report = self.transparency_checker.check(image, expected_transparent=True)
             report.transparency_report = trans_report
             report.transparency_score = trans_report.score
@@ -90,7 +94,7 @@ class QualityReviewer:
             if trans_report.edge_issues:
                 report.warnings.extend(trans_report.edge_issues)
         else:
-            report.transparency_score = 1.0  # Not required
+            report.transparency_score = 1.0  # Not required or is background type
 
         # 2. Size check
         report.size_score = self._check_size(image, request, report)

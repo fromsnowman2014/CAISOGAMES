@@ -296,7 +296,10 @@
                     // UI elements
                     ui_feed_button: 'ui/ui_feed_button.png',
                     ui_hunger_frame: 'ui/ui_hunger_frame.png',
-                    ui_fever_bar: 'ui/ui_fever_bar.png'
+                    ui_fever_bar: 'ui/ui_fever_bar.png',
+
+                    // Title screen
+                    title_background: 'ui/title_background.png'
                 };
 
                 const entries = Object.entries(assets);
@@ -1669,51 +1672,61 @@
             drawMenuScreen() {
                 const ctx = this.ctx;
 
-                // Background gradient
-                const grad = ctx.createLinearGradient(0, 0, 0, GAME_CONFIG.HEIGHT);
-                grad.addColorStop(0, '#1a1a2e');
-                grad.addColorStop(0.5, '#16213e');
-                grad.addColorStop(1, '#0f3460');
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+                // Try to draw title background image
+                const titleBg = this.assets.get('title_background');
+                if (titleBg) {
+                    // Draw title background image covering the full canvas
+                    ctx.drawImage(titleBg, 0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+                } else {
+                    // Fallback: Background gradient
+                    const grad = ctx.createLinearGradient(0, 0, 0, GAME_CONFIG.HEIGHT);
+                    grad.addColorStop(0, '#1a1a2e');
+                    grad.addColorStop(0.5, '#16213e');
+                    grad.addColorStop(1, '#0f3460');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
-                // Draw Caiso
-                this.caiso.draw(ctx, this.assets);
+                    // Draw Caiso only as fallback
+                    this.caiso.draw(ctx, this.assets);
+                }
 
-                // Title
+                // Title with shadow for better visibility
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 42px Fredoka One';
+                ctx.font = 'bold 48px Fredoka One';
                 ctx.textAlign = 'center';
-                ctx.strokeStyle = '#6c3483';
-                ctx.lineWidth = 4;
-                ctx.strokeText('FEEDING', GAME_CONFIG.WIDTH / 2, 420);
-                ctx.fillText('FEEDING', GAME_CONFIG.WIDTH / 2, 420);
-                ctx.strokeText('CAISO', GAME_CONFIG.WIDTH / 2, 470);
-                ctx.fillText('CAISO', GAME_CONFIG.WIDTH / 2, 470);
+                ctx.shadowColor = 'rgba(108, 52, 131, 0.8)';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 3;
+                ctx.fillText('FEEDING', GAME_CONFIG.WIDTH / 2, 120);
+                ctx.fillText('CAISO', GAME_CONFIG.WIDTH / 2, 175);
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
 
-                ctx.font = 'bold 18px Fredoka One';
-                ctx.fillStyle = '#9b59b6';
-                ctx.fillText('Save the Villagers!', GAME_CONFIG.WIDTH / 2, 510);
+                ctx.font = 'bold 20px Fredoka One';
+                ctx.fillStyle = '#ffe066';
+                ctx.fillText('Save the Villagers!', GAME_CONFIG.WIDTH / 2, 215);
 
-                // Instructions
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                // Instructions panel at the bottom
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.beginPath();
-                ctx.roundRect(40, 550, GAME_CONFIG.WIDTH - 80, 140, 15);
+                ctx.roundRect(30, 580, GAME_CONFIG.WIDTH - 60, 180, 15);
                 ctx.fill();
 
                 ctx.fillStyle = '#fff';
-                ctx.font = '14px Nunito';
-                ctx.fillText('Feed Caiso before it eats all villagers!', GAME_CONFIG.WIDTH / 2, 580);
-                ctx.fillText('Reduce hunger to 0% to WIN!', GAME_CONFIG.WIDTH / 2, 605);
-                ctx.fillText('Drag to move, tap FEED to throw food', GAME_CONFIG.WIDTH / 2, 630);
-                ctx.fillText('Build combos for FEVER MODE!', GAME_CONFIG.WIDTH / 2, 655);
+                ctx.font = '15px Nunito';
+                ctx.fillText('Feed Caiso before it eats all villagers!', GAME_CONFIG.WIDTH / 2, 615);
+                ctx.fillText('Reduce hunger to 0% to WIN!', GAME_CONFIG.WIDTH / 2, 645);
+                ctx.fillText('Drag to move, tap FEED to throw food', GAME_CONFIG.WIDTH / 2, 675);
+                ctx.fillText('Build combos for FEVER MODE!', GAME_CONFIG.WIDTH / 2, 705);
 
-                // Start prompt
-                ctx.font = 'bold 22px Fredoka One';
+                // Start prompt with pulsing animation
+                ctx.font = 'bold 24px Fredoka One';
                 ctx.fillStyle = '#f1c40f';
                 const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
                 ctx.globalAlpha = pulse;
-                ctx.fillText('TAP TO START', GAME_CONFIG.WIDTH / 2, 720);
+                ctx.fillText('TAP TO START', GAME_CONFIG.WIDTH / 2, 760);
                 ctx.globalAlpha = 1;
             }
 
