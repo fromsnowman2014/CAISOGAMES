@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 from PIL import Image
 
-from image_agent.core.data_classes import StyleType
+from agents.image_agent.core.data_classes import StyleType
 
 
 class StyleReport:

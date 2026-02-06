@@ -19,18 +19,18 @@ from PIL import Image
 # Add parent directory for image_generator import
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from image_agent.core.data_classes import (
+from agents.image_agent.core.data_classes import (
     AgentResult,
     AssetRequest,
     DetailedPrompt,
     IterationRecord,
     QualityReport,
 )
-from image_agent.prompts.prompt_generator import PromptGenerator
-from image_agent.prompts.prompt_improver import PromptImprover
-from image_agent.reviewers.quality_reviewer import QualityReviewer
-from image_agent.utils.config import AgentConfig
-from image_agent.utils.logging import get_logger, setup_logging
+from agents.image_agent.prompts.prompt_generator import PromptGenerator
+from agents.image_agent.prompts.prompt_improver import PromptImprover
+from agents.image_agent.reviewers.quality_reviewer import QualityReviewer
+from agents.image_agent.utils.config import AgentConfig
+from agents.image_agent.utils.logging import get_logger, setup_logging
 
 
 class ImageAgent:
@@ -74,7 +74,7 @@ class ImageAgent:
         """Lazy load the image generator service"""
         if self._generator_service is None:
             try:
-                from image_generator import ImageGeneratorService
+                from agents.image_agent.image_generator import ImageGeneratorService
                 self._generator_service = ImageGeneratorService()
                 self.logger.info(f"Using generator: {self._generator_service.generator_type}")
             except ImportError:
@@ -344,7 +344,7 @@ async def generate_asset(
     Returns:
         AgentResult with generated image
     """
-    from image_agent.core.data_classes import AssetType, StyleType
+    from agents.image_agent.core.data_classes import AssetType, StyleType
 
     request = AssetRequest(
         description=description,

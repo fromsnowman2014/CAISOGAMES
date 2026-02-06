@@ -7,7 +7,7 @@ for image generation APIs like Gemini/Imagen.
 
 from typing import Dict, List, Optional
 
-from image_agent.core.data_classes import (
+from agents.image_agent.core.data_classes import (
     AssetRequest,
     AssetType,
     DetailedPrompt,

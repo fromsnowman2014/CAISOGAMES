@@ -1,6 +1,6 @@
 """Core components of Image Agent"""
 
-from image_agent.core.data_classes import (
+from agents.image_agent.core.data_classes import (
     AssetRequest,
     AssetType,
     StyleType,

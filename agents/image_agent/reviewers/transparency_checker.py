@@ -13,7 +13,7 @@ from typing import List, Optional, Tuple
 
 from PIL import Image
 
-from image_agent.core.data_classes import TransparencyReport
+from agents.image_agent.core.data_classes import TransparencyReport
 
 
 class TransparencyChecker:

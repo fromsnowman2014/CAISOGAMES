@@ -89,7 +89,7 @@ def create_parser() -> argparse.ArgumentParser:
 async def cmd_generate(args) -> int:
     """Handle generate command"""
     from image_agent import ImageAgent, AssetRequest
-    from image_agent.core.data_classes import AssetType, StyleType
+    from agents.image_agent.core.data_classes import AssetType, StyleType
 
     # Build request
     request = AssetRequest(
@@ -105,7 +105,7 @@ async def cmd_generate(args) -> int:
     )
 
     # Configure agent
-    from image_agent.utils.config import AgentConfig
+    from agents.image_agent.utils.config import AgentConfig
     config = AgentConfig(
         max_iterations=args.max_iterations,
         quality_threshold=args.quality_threshold,
@@ -151,8 +151,8 @@ async def cmd_review(args) -> int:
     """Handle review command"""
     from PIL import Image
     from image_agent import AssetRequest
-    from image_agent.core.data_classes import AssetType, StyleType
-    from image_agent.reviewers.quality_reviewer import QualityReviewer
+    from agents.image_agent.core.data_classes import AssetType, StyleType
+    from agents.image_agent.reviewers.quality_reviewer import QualityReviewer
 
     # Load image
     image_path = Path(args.image)
@@ -232,7 +232,7 @@ async def cmd_batch(args) -> int:
     """Handle batch command"""
     import yaml
     from image_agent import ImageAgent, AssetRequest
-    from image_agent.core.data_classes import AssetType, StyleType
+    from agents.image_agent.core.data_classes import AssetType, StyleType
 
     config_path = Path(args.config)
     if not config_path.exists():
@@ -283,7 +283,7 @@ async def cmd_batch(args) -> int:
 
 def cmd_info(args) -> int:
     """Handle info command"""
-    from image_agent.utils.config import AgentConfig
+    from agents.image_agent.utils.config import AgentConfig
 
     config = AgentConfig()
 

@@ -10,14 +10,14 @@ from typing import Dict, List, Optional
 
 from PIL import Image
 
-from image_agent.core.data_classes import (
+from agents.image_agent.core.data_classes import (
     AssetRequest,
     QualityReport,
     TransparencyReport,
 )
-from image_agent.reviewers.transparency_checker import TransparencyChecker
-from image_agent.reviewers.style_checker import StyleChecker, StyleReport
-from image_agent.reviewers.color_checker import ColorChecker, ColorReport
+from agents.image_agent.reviewers.transparency_checker import TransparencyChecker
+from agents.image_agent.reviewers.style_checker import StyleChecker, StyleReport
+from agents.image_agent.reviewers.color_checker import ColorChecker, ColorReport
 
 
 class QualityReviewer:
@@ -79,7 +79,7 @@ class QualityReviewer:
 
         # 1. Transparency check
         # Backgrounds should NOT be transparent - they fill the entire frame
-        from image_agent.core.data_classes import AssetType
+        from agents.image_agent.core.data_classes import AssetType
         is_background = request.asset_type == AssetType.BACKGROUND
 
         if request.transparency and not is_background:
@@ -255,7 +255,7 @@ class QualityReviewer:
 
     def _get_max_colors_for_style(self, style) -> Optional[int]:
         """Get recommended max colors for style"""
-        from image_agent.core.data_classes import StyleType
+        from agents.image_agent.core.data_classes import StyleType
 
         color_limits = {
             StyleType.PIXEL_ART: 32,

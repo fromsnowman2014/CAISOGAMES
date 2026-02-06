@@ -22,7 +22,7 @@ Usage:
     result = await agent.generate(request)
 """
 
-from image_agent.core.data_classes import (
+from agents.image_agent.core.data_classes import (
     AssetRequest,
     AssetType,
     StyleType,
@@ -49,6 +49,6 @@ __all__ = [
 # Lazy import to avoid circular dependencies
 def __getattr__(name):
     if name == "ImageAgent":
-        from image_agent.core.image_agent import ImageAgent
+        from agents.image_agent.core.image_agent import ImageAgent
         return ImageAgent
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

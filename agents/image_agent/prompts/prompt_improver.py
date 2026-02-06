@@ -7,7 +7,7 @@ an improved prompt that addresses the identified issues.
 
 from typing import Dict, List, Optional
 
-from image_agent.core.data_classes import (
+from agents.image_agent.core.data_classes import (
     AssetRequest,
     DetailedPrompt,
     QualityReport,
