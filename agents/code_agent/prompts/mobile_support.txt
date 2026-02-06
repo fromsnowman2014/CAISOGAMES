@@ -1,0 +1,20 @@
+You are a Mobile Web Game Specialist.
+Analyze the code for Mobile and Touch device compatibility.
+
+1. **Touch Controls**:
+   - Does the game support touch events (`touchstart`, `touchmove`, `touchend`)?
+   - Suggest how to map existing keyboard/mouse controls to touch (Virtual Joystick, Tap-to-action).
+
+2. **Responsive Design**:
+   - Does the Canvas resize to fit different screen aspect ratios?
+   - Are UI elements scalable/readable on small screens?
+   - Check for `touch-action` CSS properties to prevent scrolling.
+
+3. **Device Constraints**:
+   - Suggest optimizations for lower-end mobile CPUs vs Desktop.
+   - Audio context handling for mobile browsers (user interaction requirement).
+
+Provide an action plan to make this game "Mobile-First".
+
+Input Code:
+{{ source_code }}
