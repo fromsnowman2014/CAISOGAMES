@@ -77,8 +77,15 @@ class ImageAgent:
                 from agents.image_agent.image_generator import ImageGeneratorService
                 self._generator_service = ImageGeneratorService()
                 self.logger.info(f"Using generator: {self._generator_service.generator_type}")
-            except ImportError:
-                self.logger.error("image_generator not found - using mock mode")
+            except ImportError as e:
+                self.logger.error(f"Failed to import image_generator: {str(e)} - using mock mode")
+                import traceback
+                self.logger.error(traceback.format_exc())
+                self._generator_service = MockGeneratorService()
+            except Exception as e:
+                self.logger.error(f"Unexpected error validating generator: {str(e)}")
+                import traceback
+                self.logger.error(traceback.format_exc())
                 self._generator_service = MockGeneratorService()
         return self._generator_service
 

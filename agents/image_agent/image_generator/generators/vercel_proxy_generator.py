@@ -12,8 +12,12 @@ Usage:
 
 import base64
 import os
-from typing import List, Optional
-import httpx
+import json
+import urllib.request
+import urllib.error
+import asyncio
+import ssl
+from typing import List, Optional, Dict, Any
 
 from .base import (
     BaseGenerator,
@@ -40,18 +44,17 @@ class VercelProxyGenerator(BaseGenerator):
         self,
         vercel_url: Optional[str] = None,
         api_key: str = "proxy",
-        timeout: int = 180
+        timeout: int = 300
     ):
         """
         Initialize the Vercel proxy generator.
-
+        
         Args:
-            vercel_url: Base URL of the Vercel deployment (e.g., "https://caisogames.vercel.app")
-                        Can also be set via VERCEL_APP_URL environment variable.
+            vercel_url: Base URL of the Vercel deployment
             api_key: Not used for proxy, but required by base class
-            timeout: Request timeout in seconds (longer for proxy)
+            timeout: Request timeout in seconds
         """
-        self.api_key = api_key  # Not used but required by base class
+        self.api_key = api_key
         self.timeout = timeout
 
         # Get Vercel URL from parameter or environment
@@ -67,22 +70,27 @@ class VercelProxyGenerator(BaseGenerator):
         self.vercel_url = self.vercel_url.rstrip('/')
         self.endpoint = f"{self.vercel_url}/api/generate-image"
 
+        # Create unverified SSL context for local dev
+        self.ssl_ctx = ssl.create_default_context()
+        self.ssl_ctx.check_hostname = False
+        self.ssl_ctx.verify_mode = ssl.CERT_NONE
+
     @property
     def name(self) -> str:
-        """Generator name for logging."""
         return "vercel-proxy"
 
     @property
     def supported_sizes(self) -> List[tuple]:
-        """List of supported (width, height) tuples."""
         return self.SUPPORTED_SIZES
 
     async def check_health(self) -> bool:
         """Check if the Vercel endpoint is accessible."""
+        return await asyncio.to_thread(self._check_health_sync)
+
+    def _check_health_sync(self) -> bool:
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(self.endpoint)
-                data = response.json()
+            with urllib.request.urlopen(self.endpoint, timeout=10, context=self.ssl_ctx) as response:
+                data = json.loads(response.read().decode('utf-8'))
                 return data.get('status') == 'ok' and data.get('api_configured', False)
         except Exception:
             return False
@@ -96,20 +104,8 @@ class VercelProxyGenerator(BaseGenerator):
         style: str = 'pixel_art',
         **kwargs
     ) -> List[GeneratedImage]:
-        """
-        Generate images via Vercel proxy.
-
-        Args:
-            prompt: Text description of the image
-            width: Desired width
-            height: Desired height
-            num_images: Number of images (currently only 1 supported via proxy)
-            style: Art style to apply
-            **kwargs: Additional options (passed to API)
-
-        Returns:
-            List of GeneratedImage objects
-        """
+        """Generate images via Vercel proxy."""
+        
         payload = {
             "prompt": prompt,
             "width": width,
@@ -118,22 +114,18 @@ class VercelProxyGenerator(BaseGenerator):
             **kwargs
         }
 
+        return await asyncio.to_thread(self._generate_sync, payload)
+
+    def _generate_sync(self, payload: Dict[str, Any]) -> List[GeneratedImage]:
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(self.endpoint, json=payload)
+            req = urllib.request.Request(
+                self.endpoint,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'}
+            )
 
-                if response.status_code == 429:
-                    raise RateLimitError("Rate limit exceeded")
-                elif response.status_code == 400:
-                    data = response.json()
-                    error_msg = data.get('error', 'Bad request')
-                    if 'safety' in error_msg.lower() or 'filter' in error_msg.lower():
-                        raise ContentFilterError(f"Content filtered: {error_msg}")
-                    raise GeneratorError(f"Bad request: {error_msg}")
-                elif response.status_code != 200:
-                    raise APIError(f"Proxy error: {response.status_code}")
-
-                data = response.json()
+            with urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_ctx) as response:
+                data = json.loads(response.read().decode('utf-8'))
 
                 if not data.get('success'):
                     error = data.get('error', 'Unknown error')
@@ -148,13 +140,34 @@ class VercelProxyGenerator(BaseGenerator):
 
                 return [GeneratedImage(
                     image_data=image_data,
-                    prompt=prompt,
-                    width=data.get('width', width),
-                    height=data.get('height', height),
+                    prompt=payload['prompt'],
+                    width=data.get('width', payload['width']),
+                    height=data.get('height', payload['height']),
                     format=data.get('format', 'png')
                 )]
 
-        except httpx.TimeoutException:
-            raise APIError(f"Request timed out after {self.timeout}s")
-        except httpx.RequestError as e:
-            raise APIError(f"Request failed: {str(e)}")
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                raise RateLimitError("Rate limit exceeded")
+            elif e.code == 400:
+                try:
+                    error_body = e.read().decode('utf-8')
+                    data = json.loads(error_body)
+                    error_msg = data.get('error', 'Bad request')
+                    if 'safety' in error_msg.lower() or 'filter' in error_msg.lower():
+                        raise ContentFilterError(f"Content filtered: {error_msg}")
+                    raise GeneratorError(f"Bad request: {error_msg}")
+                except json.JSONDecodeError:
+                    raise GeneratorError(f"Bad request: {e.reason}")
+            elif e.code == 504:
+                raise APIError(f"Gateway Timeout (Vercel function timed out)")
+            else:
+                raise APIError(f"Proxy error: {e.code} {e.reason}")
+                
+        except urllib.error.URLError as e:
+            if isinstance(e.reason, TimeoutError):
+                raise APIError(f"Request timed out after {self.timeout}s")
+            raise APIError(f"Connection failed: {str(e)}")
+            
+        except Exception as e:
+            raise GeneratorError(f"Unexpected error: {str(e)}")

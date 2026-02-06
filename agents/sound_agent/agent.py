@@ -391,7 +391,35 @@ class SoundAgent:
 """
         return report
     
+    
     def _get_date(self) -> str:
         """Get current date string."""
         from datetime import datetime
         return datetime.now().strftime("%Y-%m-%d")
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Sound Agent: Analyze game and generate audio assets.')
+    parser.add_argument('game_path', help='Path to the game index.html file')
+    parser.add_argument('--key', help='Gemini API Key (optional)', default=None)
+    
+    args = parser.parse_args()
+    
+    print("🎵 Starting Sound Agent...")
+    agent = SoundAgent(api_key=args.key)
+    
+    try:
+        if not os.path.exists(args.game_path):
+            print(f"❌ Error: Game file not found at {args.game_path}")
+            sys.exit(1)
+            
+        report_path = agent.analyze(args.game_path)
+        print(f"\n✨ Sound Agent finished successfully!")
+        print(f"📄 Report: {report_path}")
+        
+    except Exception as e:
+        print(f"\n❌ Error during execution: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

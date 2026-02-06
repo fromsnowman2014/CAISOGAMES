@@ -7,7 +7,13 @@ import os
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # dotenv not available, will rely on system env vars
+    def load_dotenv(*args, **kwargs):
+        pass
+
 
 # Load .env file from the image_generator directory or parent
 _env_paths = [

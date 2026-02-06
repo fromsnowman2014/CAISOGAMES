@@ -12,14 +12,11 @@ import urllib.error
 from typing import Optional, Dict, Any
 
 
+import ssl
+
 class SoundMakerService:
     """
     Client for the Sound Generation API hosted on Vercel.
-    
-    Usage:
-        service = SoundMakerService()
-        sfx_code = service.generate_sfx("button_click", "Short click sound", 100)
-        bgm_code = service.generate_bgm("gameplay", "ingame", "energetic", 120)
     """
     
     DEFAULT_URL = "https://caisogames.vercel.app"
@@ -27,12 +24,14 @@ class SoundMakerService:
     def __init__(self, base_url: Optional[str] = None):
         """
         Initialize the Sound Maker Service.
-        
-        Args:
-            base_url: Vercel app URL (uses VERCEL_APP_URL env var if not provided)
         """
         self.base_url = base_url or os.getenv("VERCEL_APP_URL", self.DEFAULT_URL)
         self.endpoint = f"{self.base_url}/api/generate-sound"
+        
+        # Create unverified SSL context for local dev
+        self.ssl_ctx = ssl.create_default_context()
+        self.ssl_ctx.check_hostname = False
+        self.ssl_ctx.verify_mode = ssl.CERT_NONE
     
     def _call_api(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Make API request to the sound generation endpoint."""
@@ -44,7 +43,7 @@ class SoundMakerService:
                 method='POST'
             )
             
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=60, context=self.ssl_ctx) as response:
                 result = json.loads(response.read().decode('utf-8'))
                 return result
                 

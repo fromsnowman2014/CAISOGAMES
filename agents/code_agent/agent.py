@@ -25,13 +25,19 @@ class CodeAgent:
             "code": code
         }
         
+        # Create unverified SSL context for local dev
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
         try:
             req = urllib.request.Request(
                 self.api_endpoint,
                 data=json.dumps(payload).encode('utf-8'),
                 headers={'Content-Type': 'application/json'}
             )
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, context=ctx) as response:
                 result = json.loads(response.read().decode('utf-8'))
                 if result.get("success"):
                     return result.get("analysis", "No analysis returned.")

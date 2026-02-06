@@ -91,7 +91,8 @@
             cursor: pointer;
             box-shadow: 0 8px 25px rgba(108, 92, 231, 0.6), 0 0 30px rgba(108, 92, 231, 0.4);
             z-index: 100;
-            display: flex;
+            z-index: 100;
+            display: none;
             align-items: center;
             justify-content: center;
             transition: transform 0.1s, box-shadow 0.1s;
@@ -1267,6 +1268,9 @@
                 if (this.audio && this.audio.ctx.state === 'suspended') {
                     this.audio.ctx.resume();
                 }
+
+                // Show feed button
+                document.getElementById('touchFeedBtn').style.display = 'flex';
             }
 
             spawnVillager(id) {
@@ -1339,6 +1343,7 @@
                     this.caiso.expression = 'happy';
                     this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#ffd700', 60);
                     this.audio.play('levelup'); // Victory sound
+                    document.getElementById('touchFeedBtn').style.display = 'none';
                 }
             }
 
@@ -1393,6 +1398,7 @@
                         this.state = 'gameover';
                         this.caiso.expression = 'sad';
                         this.audio.play('gameover'); // Play gameover sound
+                        document.getElementById('touchFeedBtn').style.display = 'none';
                     }
                 }
             }
@@ -1699,7 +1705,11 @@
                     ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
                     // Draw Caiso only as fallback
+                    // Draw Caiso with offset to avoid title overlap
+                    ctx.save();
+                    ctx.translate(0, 100);
                     this.caiso.draw(ctx, this.assets);
+                    ctx.restore();
                 }
 
                 // Title with shadow for better visibility
@@ -1720,21 +1730,22 @@
                 ctx.fillStyle = '#ffe066';
                 ctx.fillText('Save the Villagers!', GAME_CONFIG.WIDTH / 2, 215);
 
-                // Instructions panel at the bottom
+                // Instructions panel at the bottom (Shifted up to make room for start text)
+                const panelY = 530;
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.beginPath();
-                ctx.roundRect(30, 580, GAME_CONFIG.WIDTH - 60, 180, 15);
+                ctx.roundRect(30, panelY, GAME_CONFIG.WIDTH - 60, 160, 15);
                 ctx.fill();
 
                 ctx.fillStyle = '#fff';
                 ctx.font = '15px Nunito';
-                ctx.fillText('Feed Caiso before it eats all villagers!', GAME_CONFIG.WIDTH / 2, 615);
-                ctx.fillText('Reduce hunger to 0% to WIN!', GAME_CONFIG.WIDTH / 2, 645);
-                ctx.fillText('Drag to move, tap FEED to throw food', GAME_CONFIG.WIDTH / 2, 675);
-                ctx.fillText('Build combos for FEVER MODE!', GAME_CONFIG.WIDTH / 2, 705);
+                ctx.fillText('Feed Caiso before it eats all villagers!', GAME_CONFIG.WIDTH / 2, panelY + 35);
+                ctx.fillText('Reduce hunger to 0% to WIN!', GAME_CONFIG.WIDTH / 2, panelY + 65);
+                ctx.fillText('Drag to move, tap FEED to throw food', GAME_CONFIG.WIDTH / 2, panelY + 95);
+                ctx.fillText('Build combos for FEVER MODE!', GAME_CONFIG.WIDTH / 2, panelY + 125);
 
-                // Start prompt with pulsing animation
-                ctx.font = 'bold 24px Fredoka One';
+                // Start prompt with pulsing animation (Visible above where button would be)
+                ctx.font = 'bold 28px Fredoka One';
                 ctx.fillStyle = '#f1c40f';
                 const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
                 ctx.globalAlpha = pulse;

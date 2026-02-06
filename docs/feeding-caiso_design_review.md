@@ -9,14 +9,14 @@
 
 **Genre**: Casual / Arcade Feeding Game
 **Core Loop**:
-- **Action**: Player throws food at Caiso (the monster).
-- **Feedback**: Caiso reacts (Happy/Sad), Audio plays, Particles appear.
-- **Reward**: Score increases, Level up unlocks new food.
+- **Action**: Player throws "Kawaii" food items at Caiso (the purple monster).
+- **Feedback**: Caiso reacts with animated expressions (Happy/Sad/Hungry), Sound FX plays.
+- **Reward**: Score increases, Caiso evolves visually, New food items unlock.
 **Controls**: Mouse Click or Touch (Mobile), Spacebar (PC).
 **Win/Loss**:
-- **Win**: Feed Caiso until fullness reaches 100%.
-- **Loss**: Villagers (lives) reach 0.
-**Key Entities**: Caiso (Monster), Player (Avatar), Food Items, Villagers.
+- **Win**: Keep Caiso fed until Evolution stage 5.
+- **Loss**: Villagers (lives) reach 0 due to starvation.
+**Key Entities**: Caiso (Kawaii Monster), Player (Provider), Food (Pizza, Burger, etc.), Villagers (Resource).
 
 
 ---
@@ -28,9 +28,10 @@
 - **Analysis**: The hunger decay rate seems linear (`this.hunger -= 0.1`).
 **Progression**:
 - New foods unlock at levels 2, 3, 4, 5.
-- Visually rewarding but mechanically identical (just different textures).
+- Visually rewarding (Kawaii food art) but mechanics remain identical.
 **Risk vs Reward**:
 - Low risk. Missed shots have no penalty specific enough other than time loss.
+- **Feedback**: The "Sad" animation provides good negative feedback, but needs gameplay consequence.
 **Issues**:
 - No 'Game Over' state handled robustly in some edge cases.
 
@@ -39,14 +40,14 @@
 
 ## 🎭 Narrative Proposal (Lore Bible)
 
-**Title Proposal**: "Caiso's Midnight Snack"
-**The World**: A neon-lit cyber-city where 'Caiso' is a guardian kaiju.
-**The Protagonist**: 'Chef K', a legendary food truck owner capable of feeding titans.
-**Conflict**: Caiso gets 'Hangry' and threatens to eat the city's power grid (represented by villagers).
+**Title Proposal**: "Feeding Caiso: The Hangry Monster"
+**The World**: A pastel-colored island 'NomNom Land' where monsters and villagers live in harmony, as long as lunch is served on time.
+**The Protagonist**: 'Chef Pixel', the royal feeder appointed to keep the guardian monster Caiso happy.
+**The Conflict**: Caiso is going through a growth spurt and gets "Hangry" (Hungry + Angry). If he's not fed, he accidentally scares the villagers away!
 **Flavor Text**:
-- Start: "Order Up! Feed the Beast!"
-- Game Over: "The City went Dark..."
-- Level Up: "Expansion Pack Unlocked!"
+- Start: "It's Lunch Time! Don't let him get Hangry!"
+- Game Over: "Oh no! The villagers ran away!"
+- Level Up: "Caiso is growing! New menu unlocked!"
 
 
 ---
