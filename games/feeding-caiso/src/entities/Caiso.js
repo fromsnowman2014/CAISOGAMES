@@ -1,5 +1,5 @@
-import { GAME_CONFIG, EVOLUTION_TIERS } from '../utils/Constants.js';
-import { SquashStretch } from '../utils/SquashStretch.js';
+import { GAME_CONFIG, EVOLUTION_TIERS } from '/src/utils/Constants.js';
+import { SquashStretch } from '/src/utils/SquashStretch.js';
 
 export class Caiso {
     constructor() {

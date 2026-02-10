@@ -1,14 +1,14 @@
-import { GAME_CONFIG, FOODS, EVOLUTION_TIERS, FEVER_CONFIG } from '../utils/Constants.js';
-import { AssetManager } from '../managers/AssetManager.js';
-import { AudioManager } from './Audio.js';
-import { VirtualJoystick } from './Input.js';
-import { ParallaxBackground } from '../utils/ParallaxBackground.js';
-import { FeverMode } from '../utils/FeverMode.js';
-import { ScreenShake, ImpactFrame } from '../utils/Juice.js';
-import { Caiso } from '../entities/Caiso.js';
-import { Player } from '../entities/Player.js';
-import { Villager } from '../entities/Villager.js';
-import { Food } from '../entities/Food.js';
+import { GAME_CONFIG, FOODS, EVOLUTION_TIERS, FEVER_CONFIG } from '/src/utils/Constants.js';
+import { AssetManager } from '/src/managers/AssetManager.js';
+import { AudioManager } from '/src/core/Audio.js';
+import { VirtualJoystick } from '/src/core/Input.js';
+import { ParallaxBackground } from '/src/utils/ParallaxBackground.js';
+import { FeverMode } from '/src/utils/FeverMode.js';
+import { ScreenShake, ImpactFrame } from '/src/utils/Juice.js';
+import { Caiso } from '/src/entities/Caiso.js';
+import { Player } from '/src/entities/Player.js';
+import { Villager } from '/src/entities/Villager.js';
+import { Food } from '/src/entities/Food.js';
 
 export class Game {
     constructor(canvas) {

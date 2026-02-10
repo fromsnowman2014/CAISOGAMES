@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from './Constants.js';
+import { GAME_CONFIG } from '/src/utils/Constants.js';
 
 export class ParallaxBackground {
     constructor(assets) {

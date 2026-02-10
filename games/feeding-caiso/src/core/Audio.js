@@ -1,4 +1,4 @@
-import { SoundLibrary } from '../generated/SoundLibrary.js';
+import { SoundLibrary } from '/src/generated/SoundLibrary.js';
 
 export class AudioManager {
     constructor() {
