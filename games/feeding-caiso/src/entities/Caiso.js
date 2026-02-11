@@ -82,7 +82,7 @@ export class Caiso {
         } else if (this.expression === 'happy') {
             spriteKey = 'caiso_happy';
         } else if (this.expression === 'sad') {
-            spriteKey = 'caiso_hungry'; // Reuse hungry/open mouth for sad/shocked for now
+            spriteKey = 'caiso_sad';
         }
 
         const img = assets.get(spriteKey);

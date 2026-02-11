@@ -50,7 +50,7 @@ Feeding Caiso is a casual arcade game where players must feed a hungry monster n
 ## Visual Design
 
 ### Characters
-- **Caiso**: Purple monster with horns, large mouth, expressive eyes
+- **Caiso**: Green monster with horns, large mouth, 욕심많고 무서운 얼굴
 - **Villagers**: Small human figures that walk backwards toward Caiso
 - **Player**: Back-view character with food basket
 

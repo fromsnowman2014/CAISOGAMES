@@ -42,14 +42,11 @@ export class ParallaxBackground {
     }
 
     drawFallbackLayer(ctx, layer) {
-        if (layer.key === 'bg_sky') {
-            const grad = ctx.createLinearGradient(0, 0, 0, 300);
-            grad.addColorStop(0, '#1a1a2e');
-            grad.addColorStop(1, '#16213e');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, 300);
-        } else if (layer.key === 'bg_ground') {
+        if (layer.key === 'bg_ground') {
             ctx.fillStyle = '#0f3460';
+            ctx.fillRect(0, layer.y, GAME_CONFIG.WIDTH, layer.height);
+        } else if (layer.key === 'bg_clouds') {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.fillRect(0, layer.y, GAME_CONFIG.WIDTH, layer.height);
         }
     }

@@ -24,6 +24,7 @@ export class Game {
 
         this.assets = new AssetManager();
         this.audio = new AudioManager();
+        this.ui = null;
         this.state = 'loading';
         this.hunger = 100;
         this.villagerCount = 100;
@@ -51,7 +52,6 @@ export class Game {
         this.shake = new ScreenShake();
         this.freeze = new ImpactFrame();
 
-        // Phase 5 Systems
         this.environment = new Environment(this);
         this.lighting = new LightingSystem(this);
         this.stageManager = new StageManager(this);
@@ -62,14 +62,13 @@ export class Game {
     }
 
     async init() {
-        console.log("Feeding Caiso v4.0 - Modular Phase Loaded");
+        console.log("Feeding Caiso v5.0 - Refactored");
         await this.assets.loadAll();
         this.background = new ParallaxBackground(this.assets);
+        this.ui = new UIManager(this);
         this.state = 'menu';
 
-        // Initialize Stage Logic
         this.stageManager.init();
-
         this.setupEventListeners();
         this.hideLoading();
     }
@@ -104,7 +103,6 @@ export class Game {
         if (this.state === 'menu') this.startGame();
         else if (this.state === 'gameover' || this.state === 'victory') this.startGame();
 
-        // Allow audio context to resume on first user interaction
         if (this.audio && this.audio.ctx.state === 'suspended') {
             this.audio.ctx.resume();
         }
@@ -117,7 +115,7 @@ export class Game {
             const [foodKey, food] = foodEntries[index];
             if (food.unlockLevel <= this.level) {
                 this.selectedFoodKey = foodKey;
-                this.ui.updateFoodSelection(); // Reflect keyboard selection in UI
+                if (this.ui) this.ui.updateFoodSelection();
             }
         }
     }
@@ -129,37 +127,29 @@ export class Game {
         this.level = 1;
         this.combo = 0;
         this.maxCombo = 0;
-        this.villagerTimer = 0;
-        this.comboTimer = 0;
-        this.flyingFoods = [];
-        this.hazards = [];
-        this.particles = [];
         this.totalHungerReduced = 0;
         this.selectedFoodKey = 'apple';
         this.gameTime = 0;
         this.villagerTimer = 0;
         this.comboTimer = 0;
         this.flyingFoods = [];
+        this.hazards = [];
         this.particles = [];
         this.floatingTexts = [];
         this.caiso.reset();
         this.fever = new FeverMode();
 
-        // Create initial villagers
         this.villagers = [];
         for (let i = 0; i < 12; i++) {
             this.spawnVillager(i);
         }
 
-        // Resume audio if needed
         if (this.audio && this.audio.ctx.state === 'suspended') {
             this.audio.ctx.resume();
         }
 
-        // Show UI
-        this.ui.show();
+        if (this.ui) this.ui.show();
 
-        // Show feed button
         const feedBtn = document.getElementById('touchFeedBtn');
         if (feedBtn) feedBtn.style.display = 'flex';
     }
@@ -201,18 +191,14 @@ export class Game {
         this.combo++;
         if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
-        // Charge fever
         this.fever.charge(FEVER_CONFIG.chargeRate + (this.combo > 3 ? FEVER_CONFIG.comboBonus : 0));
 
-        // Level up
-        const newLevel = Math.floor(this.totalHungerReduced / 4) + 1;
+        const newLevel = Math.floor(this.totalHungerReduced / GAME_CONFIG.HUNGER_PER_LEVEL) + 1;
         if (newLevel > this.level) {
             this.levelUp(newLevel);
-            // Notify Stage Manager of potential stage change
-            this.stageManager.update(0); // Check for transition
+            this.stageManager.update(0);
         }
 
-        // Evolution check
         if (this.caiso.updateEvolution(this.level)) {
             const tier = EVOLUTION_TIERS[this.caiso.evolutionTier];
             this.addFloatingText(`EVOLVED: ${tier.name}!`, GAME_CONFIG.WIDTH / 2, 200, '#ff006e');
@@ -236,13 +222,7 @@ export class Game {
         this.audio.play('eat');
 
         if (this.hunger <= 0) {
-            this.state = 'victory';
-            this.caiso.expression = 'happy';
-            this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#ffd700', 60);
-            this.audio.play('levelup');
-            this.ui.hide();
-            const feedBtn = document.getElementById('touchFeedBtn');
-            if (feedBtn) feedBtn.style.display = 'none';
+            this.endGame('victory');
         }
     }
 
@@ -295,14 +275,25 @@ export class Game {
             }
 
             if (this.villagerCount <= 0) {
-                this.state = 'gameover';
-                this.caiso.expression = 'sad';
-                this.audio.play('gameover');
-                this.ui.hide();
-                const feedBtn = document.getElementById('touchFeedBtn');
-                if (feedBtn) feedBtn.style.display = 'none';
+                this.endGame('gameover');
             }
         }
+    }
+
+    endGame(state) {
+        this.state = state;
+        this.caiso.expression = state === 'victory' ? 'happy' : 'sad';
+
+        if (state === 'victory') {
+            this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#ffd700', 60);
+            this.audio.play('levelup');
+        } else {
+            this.audio.play('gameover');
+        }
+
+        if (this.ui) this.ui.hide();
+        const feedBtn = document.getElementById('touchFeedBtn');
+        if (feedBtn) feedBtn.style.display = 'none';
     }
 
     addFloatingText(text, x, y, color) {
@@ -330,24 +321,18 @@ export class Game {
 
         this.gameTime += deltaTime;
 
-        // Phase 5 System Updates
         this.environment.update(deltaTime);
         this.lighting.update(deltaTime);
         this.stageManager.update(deltaTime);
-        this.ui.update();
+        if (this.ui) this.ui.update();
 
-        // Background parallax
         const bgSpeedMult = this.fever.active ? 2.5 : 1.0;
         this.background.update(this.player.vx * bgSpeedMult, deltaTime);
 
-        // Villager timer
+        // Villager consume timer with difficulty scaling
         let baseInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
-        // Difficulty scaling: faster consumption as level increases (capped at 50% speed)
         baseInterval = Math.max(baseInterval * 0.5, baseInterval - (this.level * 150));
-
-        const consumeInterval = this.fever.active ?
-            baseInterval * 1.5 :
-            baseInterval;
+        const consumeInterval = this.fever.active ? baseInterval * 1.5 : baseInterval;
 
         this.villagerTimer += deltaTime;
         if (this.villagerTimer >= consumeInterval) {
@@ -355,7 +340,7 @@ export class Game {
             this.consumeVillager();
         }
 
-        // Combo timer
+        // Combo decay
         if (this.comboTimer > 0) {
             this.comboTimer -= deltaTime;
             if (this.comboTimer <= 0) this.combo = 0;
@@ -366,31 +351,38 @@ export class Game {
         this.player.update(deltaTime, this.joystick);
         this.fever.update(deltaTime);
 
-        // Update villagers
         this.villagers.forEach(v => v.update(deltaTime, this.environment));
         this.villagers = this.villagers.filter(v => v.active);
 
-        // Update flying foods
-        this.flyingFoods.forEach((food, index) => {
+        // Update flying foods (collect arrived/collided, then process)
+        const arrivedFoods = [];
+        this.flyingFoods.forEach(food => {
             food.update(deltaTime, this.environment);
 
-            // Hazard collision
-            this.hazards.forEach(hazard => {
+            // Check hazard collisions
+            for (const hazard of this.hazards) {
                 const dx = food.x - hazard.x;
                 const dy = food.y - hazard.y;
                 if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
-                    // Collision!
-                    food.arrived = true; // Force removal
-                    // remove food without consuming
-                    this.flyingFoods.splice(index, 1);
+                    food.arrived = true;
                     this.addParticles(food.x, food.y, '#fff', 10);
-                    this.audio.play('hit'); // Assuming hit sound exists or fallback
+                    break;
                 }
-            });
+            }
 
             if (food.arrived) {
+                arrivedFoods.push(food);
+            }
+        });
+
+        // Remove arrived foods and consume
+        this.flyingFoods = this.flyingFoods.filter(f => !f.arrived);
+        arrivedFoods.forEach(food => {
+            // Only consume if it reached Caiso (not blocked by hazard)
+            const dx = food.x - this.caiso.x;
+            const dy = food.y - this.caiso.getMouthPosition().y;
+            if (Math.abs(dx) < 60 && Math.abs(dy) < 60) {
                 this.consumeFood(food.foodData);
-                this.flyingFoods.splice(index, 1);
             }
         });
 
@@ -419,7 +411,6 @@ export class Game {
     render() {
         const ctx = this.ctx;
 
-        // Clear
         ctx.fillStyle = '#0a0a1a';
         ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
@@ -442,14 +433,10 @@ export class Game {
         ctx.save();
         this.shake.apply(ctx);
 
-        // Background
-        this.environment.drawBackground(ctx); // Draw sky/ambient color first
+        this.environment.drawBackground(ctx);
         this.background.draw(ctx);
-
-        // Lighting Overlay (Atmosphere)
         this.lighting.draw(ctx);
 
-        // Fever effects
         if (this.fever.active) {
             this.fever.draw(ctx);
         }
@@ -459,19 +446,10 @@ export class Game {
         ctx.fillStyle = `rgba(231, 76, 60, ${0.05 + timerProgress * 0.15})`;
         ctx.fillRect(0, GAME_CONFIG.CAISO_Y - 80, GAME_CONFIG.WIDTH, 200);
 
-        // Draw villagers
         this.villagers.forEach(v => v.draw(ctx, this.assets));
-
-        // Draw Caiso
         this.caiso.draw(ctx, this.assets);
-
-        // Draw player
         this.player.draw(ctx, this.assets);
-
-        // Draw flying foods
         this.flyingFoods.forEach(food => food.draw(ctx));
-
-        // Draw hazards
         this.hazards.forEach(h => h.draw(ctx));
 
         // Draw particles
@@ -497,11 +475,7 @@ export class Game {
         this.joystick.draw(ctx);
 
         ctx.restore();
-
-        // UI is now handled by UIManager (DOM Overlay)
     }
-
-    // drawUI removed - replaced by UIManager
 
     drawMenuScreen() {
         const ctx = this.ctx;

@@ -3,7 +3,7 @@ import { GAME_CONFIG, FEVER_CONFIG } from '/src/utils/Constants.js';
 export class FeverMode {
     constructor() {
         this.gauge = 0;
-        this.maxGauge = FEVER_CONFIG.gaugeMax || 100; // Default if missing
+        this.maxGauge = FEVER_CONFIG.gaugeMax;
         this.active = false;
         this.duration = FEVER_CONFIG.duration;
         this.timer = 0;

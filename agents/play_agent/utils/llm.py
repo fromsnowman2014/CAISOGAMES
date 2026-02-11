@@ -1,63 +1,22 @@
-import json
-import os
-import urllib.request
-import urllib.error
-from typing import Optional, Dict, Any
+"""Play Agent LLM Service - extends shared LLM with QA analysis mocks."""
 
-class LLMService:
-    """
-    Zero-dependency LLM client for Play Agent.
-    Includes specialized mocks for QA log analysis.
-    """
-    
-    BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-    DEFAULT_MODEL = "gemini-3-pro-preview"
-    
-    def __init__(self, api_key: Optional[str] = None, model: str = DEFAULT_MODEL):
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
-        self.model = model
-        if not self.api_key:
-            print("⚠️ Warning: GEMINI_API_KEY not found. Using Mock LLM mode.")
-            self.mock_mode = True
-        else:
-            self.mock_mode = False
-            
-    def generate(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        if self.mock_mode:
-            return self._generate_mock(prompt)
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-        url = f"{self.BASE_URL}/{self.model}:generateContent?key={self.api_key}"
-        
-        contents = [{"parts": [{"text": prompt}]}]
-        
-        payload: Dict[str, Any] = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": 0.4, # Balanced for QA analysis
-                "maxOutputTokens": 4000,
-            }
-        }
-        
-        if system_instruction:
-             payload["systemInstruction"] = {
-                "parts": [{"text": system_instruction}]
-             }
-            
-        try:
-            req = urllib.request.Request(
-                url, 
-                data=json.dumps(payload).encode('utf-8'), 
-                headers={'Content-Type': 'application/json'}
-            )
-            with urllib.request.urlopen(req) as response:
-                result = json.loads(response.read().decode('utf-8'))
-                return result['candidates'][0]['content']['parts'][0]['text']
-        except Exception as e:
-            return f"Error: {str(e)}"
+from agents.shared.llm import LLMService as BaseLLMService
+
+
+class LLMService(BaseLLMService):
+    """LLM Service with Play Agent specific mock responses."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("temperature", 0.4)
+        super().__init__(**kwargs)
 
     def _generate_mock(self, prompt: str) -> str:
         """Mock responses for Play Agent QA Analysis."""
-        
+
         if "QA Engineer" in prompt or "Gameplay Logs" in prompt:
             return """
 ### 1. Stability Assessment
@@ -75,6 +34,7 @@ class LLMService:
 - **Monitor FPS**: Slight drop detected during particle explosion (58 -> 45 FPS). Optimize particle pool.
 """
         return "Mock QA Report"
+
 
 def get_llm():
     return LLMService()

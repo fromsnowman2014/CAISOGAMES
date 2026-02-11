@@ -26,7 +26,7 @@ import httpx
 # Gemini API configuration
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-3-pro-preview"
 
 def get_structure_prompt(code: str) -> str:
     return f"""You are a Senior Game Developer and Software Architect.
@@ -136,9 +136,24 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({'success': False, 'error': str(e)}).encode())
 
+    def do_GET(self):
+        """Health check endpoint."""
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(json.dumps({
+            'status': 'ok',
+            'endpoint': '/api/analyze-code',
+            'method': 'POST',
+            'types': ['structure', 'performance', 'mobile'],
+            'model': MODEL,
+            'api_configured': bool(GEMINI_API_KEY)
+        }).encode())
+
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()

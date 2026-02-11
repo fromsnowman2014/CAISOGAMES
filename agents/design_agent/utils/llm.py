@@ -1,86 +1,18 @@
-import json
-import os
-import urllib.request
-import urllib.error
-import time
-from typing import Optional, Dict, Any
+"""Design Agent LLM Service - extends shared LLM with design & sound mocks."""
 
-class LLMService:
-    """
-    Zero-dependency LLM client using Gemini API via urllib.
-    """
-    
-    BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-    DEFAULT_MODEL = "gemini-3-pro-preview"
-    
-    def __init__(self, api_key: Optional[str] = None, model: str = DEFAULT_MODEL):
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
-        self.model = model
-        if not self.api_key:
-            print("⚠️ Warning: GEMINI_API_KEY not found. Using Mock LLM mode.")
-            self.mock_mode = True
-        else:
-            self.mock_mode = False
-            
-    def generate(self, prompt: str, system_instruction: Optional[str] = None) -> str:
-        """
-        Generate text response from Gemini (or Mock).
-        """
-        if self.mock_mode:
-            return self._generate_mock(prompt)
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-        url = f"{self.BASE_URL}/{self.model}:generateContent?key={self.api_key}"
-        
-        # Construct payload
-        contents = [{"parts": [{"text": prompt}]}]
-        
-        # Add system instruction if supported (Gemini 1.5 supports it)
-        payload: Dict[str, Any] = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 4000,
-            }
-        }
-        
-        if system_instruction:
-             payload["systemInstruction"] = {
-                "parts": [{"text": system_instruction}]
-             }
-            
-        data = json.dumps(payload).encode('utf-8')
-        
-        req = urllib.request.Request(
-            url, 
-            data=data, 
-            headers={'Content-Type': 'application/json'}
-        )
-        
-        try:
-            with urllib.request.urlopen(req) as response:
-                result = json.loads(response.read().decode('utf-8'))
-                
-                # Parse response
-                try:
-                    candidates = result.get('candidates', [])
-                    if not candidates:
-                        return "Error: No candidates returned from API."
-                        
-                    content = candidates[0].get('content', {})
-                    parts = content.get('parts', [])
-                    if not parts:
-                        return "Error: Empty response parts."
-                        
-                    return parts[0].get('text', '')
-                    
-                except (KeyError, IndexError) as e:
-                    return f"Error parsing API response: {str(e)}"
-                    
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8')
-            return f"API Error {e.code}: {e.reason}\nDetails: {error_body}"
-        except Exception as e:
-            return f"Network Error: {str(e)}"
+from agents.shared.llm import LLMService as BaseLLMService
+
+
+class LLMService(BaseLLMService):
+    """LLM Service with Design Agent and Sound Agent mock responses."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("temperature", 0.7)
+        super().__init__(**kwargs)
 
     def _generate_mock(self, prompt: str) -> str:
         """Return a plausible mock response based on the prompt type."""
@@ -139,17 +71,17 @@ function play{sound_name.title().replace("_", "")}() {{
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
-    
+
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(800, ctx.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
-    
+
     gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-    
+
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + 0.1);
 }}
@@ -163,23 +95,23 @@ class GameplayBGM {
     constructor() {
         this.synth = new Tone.PolySynth(Tone.Synth).toDestination();
         this.synth.volume.value = -10;
-        
+
         this.pattern = new Tone.Sequence((time, note) => {
             this.synth.triggerAttackRelease(note, "8n", time);
         }, ["C4", "E4", "G4", "B4", "C5", "B4", "G4", "E4"], "8n");
     }
-    
+
     start() {
         Tone.Transport.bpm.value = 120;
         this.pattern.start(0);
         Tone.Transport.start();
     }
-    
+
     stop() {
         this.pattern.stop();
         Tone.Transport.stop();
     }
-    
+
     setVolume(vol) {
         this.synth.volume.value = vol;
     }
@@ -206,9 +138,9 @@ class GameplayBGM {
 - **Game Over**: Lives depleted
 
 ## 3. Sound Gap Analysis
-- ⚠️ NO background music
-- ⚠️ NO UI button sounds
-- ⚠️ NO feedback sounds for gameplay
+- NO background music
+- NO UI button sounds
+- NO feedback sounds for gameplay
 
 ## 4. Sound Priority List
 1. `food_throw` - Core interaction feedback
@@ -219,6 +151,6 @@ class GameplayBGM {
 """
         return "Mock Analysis Response"
 
-# Convenience instance
+
 def get_llm():
     return LLMService()

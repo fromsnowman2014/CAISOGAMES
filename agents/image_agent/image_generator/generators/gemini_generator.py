@@ -225,7 +225,7 @@ Requirements:
                     height=height,
                     prompt=prompt,
                     metadata={
-                        'model': 'imagen-3.0',
+                        'model': 'imagen-4.0-generate-001',
                         'generator': 'imagen',
                     },
                     timestamp=datetime.now()

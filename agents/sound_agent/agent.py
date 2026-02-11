@@ -28,11 +28,11 @@ try:
 except ImportError:
     SOUND_MAKER_AVAILABLE = False
 
-# Fallback to LLM service
+# LLM service (sound_agent's own, extends shared base)
 try:
-    from agents.design_agent.utils.llm import LLMService
-except ImportError:
     from agents.sound_agent.utils.llm import LLMService
+except ImportError:
+    from .utils.llm import LLMService
 
 
 @dataclass

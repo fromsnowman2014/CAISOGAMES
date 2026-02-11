@@ -19,7 +19,7 @@ class DesignAgent:
     def __init__(self, config_path: str = "config.yaml"):
         # Load config (Mock implementation for zero-dependency)
         self.config = {
-            "model_name": os.environ.get("AGENT_MODEL_NAME", "gemini-1.5-flash"),
+            "model_name": os.environ.get("AGENT_MODEL_NAME", "gemini-3-pro-preview"),
             "max_tokens": int(os.environ.get("AGENT_MAX_TOKENS", 4000)),
             "output_dir": os.environ.get("AGENT_OUTPUT_DIR", "docs"),
         }

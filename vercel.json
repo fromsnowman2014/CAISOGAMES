@@ -20,6 +20,22 @@
       "dest": "/api/generate_image.py"
     },
     {
+      "src": "/api/analyze-code",
+      "dest": "/api/analyze_code.py"
+    },
+    {
+      "src": "/api/analyze_code",
+      "dest": "/api/analyze_code.py"
+    },
+    {
+      "src": "/api/generate-sound",
+      "dest": "/api/generate_sound.py"
+    },
+    {
+      "src": "/api/generate_sound",
+      "dest": "/api/generate_sound.py"
+    },
+    {
       "src": "/games/(.*)",
       "dest": "/games/$1"
     },

@@ -1,6 +1,6 @@
-import { STAGES } from '../config/Stages.js';
-import { Hazard } from '../entities/Hazard.js';
-import { GAME_CONFIG } from '../utils/Constants.js';
+import { STAGES } from '/src/config/Stages.js';
+import { Hazard } from '/src/entities/Hazard.js';
+import { GAME_CONFIG } from '/src/utils/Constants.js';
 
 export class StageManager {
     constructor(game) {
