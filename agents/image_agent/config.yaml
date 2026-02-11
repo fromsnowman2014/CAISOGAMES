@@ -6,7 +6,7 @@ max_iterations: 5
 quality_threshold: 0.9
 
 # Model Settings
-model_name: "gemini-1.5-flash"
+model_name: "gemini-3-pro-preview"
 max_output_tokens: 4096
 
 # Weights for quality scoring
