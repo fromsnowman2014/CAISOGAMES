@@ -59,7 +59,7 @@ We will use the **CAISOGAMES Agents** to execute this plan efficiently.
 
 ### **Step 2: Asset Generation (Image Agent / Generator)**
 - **Objective**: Create "Sophisticated" assets for all 10 stages.
-- **Style Prompt**: *"Vector art, minimalist, gradient shading, soft lighting, 4k resolution, mobile game asset, [Stage Theme Specifics]"*
+- **Style Prompt**: *"Vector art, minimalist, gradient shading, soft lighting, mobile game asset, [Stage Theme Specifics]"*
 - **Agent Usage**:
     - **`image_generator`**:
         - Generate 10 Backgrounds (Parallax ready).
@@ -68,14 +68,15 @@ We will use the **CAISOGAMES Agents** to execute this plan efficiently.
     - **Process**:
         1. Define Prompts in `phase5/assets_req.yaml`.
         2. Run generator.
-        3. Review and refine.
+        3. Review and refine and enhance to get the 90% quality (repeat 5 times as maximum).
 
 ### **Step 3: Gameplay Mechanics (Code Agent / Play Agent)**
 - **Objective**: Implement the mechanics (Wind, Gravity, Lighting).
 - **Agent Usage**:
     - **`code_agent`**: Review the implementation of physics (wind/gravity) for performance bottlenecks.
     - **`play_agent`**:
-        - **Training**: Train the agent to play the new stages.
+        - **Making**: Enhance a detailed plan about 10 stages with different difficulty levels/items/obstacles/graphics. difficulty goes up as the stage goes up.
+        - **Training**: use the agent review and enhance the difficulty of the stages 
         - **Balancing**: Use the agent to find the optimal difficulty (spawn rates, wind speed) for each stage to ensure it is "Challenging but Relaxing" (Flow state).
         - **Feedback**: Adjust parameters based on agent's failure rate.
 

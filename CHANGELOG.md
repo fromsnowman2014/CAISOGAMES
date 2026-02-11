@@ -5,11 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Changed
-- Upgraded agents to use Gemini 3 models (`gemini-3-pro-preview`):
-  - `agents/code_agent/utils/llm.py`
-  - `agents/design_agent/utils/llm.py`
-  - `agents/image_agent/config.yaml`
-  - `agents/image_agent/image_generator/generators/gemini_generator.py`
-  - `agents/play_agent/utils/llm.py`
-  - `agents/sound_agent/config.yaml`
+- Upgraded all agents to latest Gemini models:
+  - Text generation: `gemini-3-pro-preview` (code_agent, design_agent, play_agent, sound_agent, image_agent)
+  - Image generation: `imagen-4.0-generate-001` (image_agent REST & SDK generators)
+  - Fallback text model: `gemini-3-pro-preview` (image_agent REST generator)
 - Fixed typo in `games/feeding-caiso/docs/phase3/PHASE3_ANALYSIS_REPORT.md`.

@@ -42,7 +42,7 @@ class GeminiGenerator(BaseGenerator):
         (1024, 1536),
     ]
 
-    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash-image"):
+    def __init__(self, api_key: str, model_name: str = "gemini-3-pro-preview"):
         """
         Initialize Gemini generator.
 
@@ -200,7 +200,7 @@ Requirements:
         """Fallback to Imagen API if available."""
         try:
             # Try using the imagen model directly
-            imagen = genai.ImageGenerationModel("imagen-3.0-generate-002")
+            imagen = genai.ImageGenerationModel("imagen-4.0-generate-001")
 
             response = await asyncio.to_thread(
                 imagen.generate_images,

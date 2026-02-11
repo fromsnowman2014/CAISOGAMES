@@ -9,6 +9,11 @@ import { Caiso } from '/src/entities/Caiso.js';
 import { Player } from '/src/entities/Player.js';
 import { Villager } from '/src/entities/Villager.js';
 import { Food } from '/src/entities/Food.js';
+import { Hazard } from '/src/entities/Hazard.js';
+import { StageManager } from '/src/core/StageManager.js';
+import { Environment } from '/src/core/Environment.js';
+import { LightingSystem } from '/src/systems/LightingSystem.js';
+import { UIManager } from '/src/managers/UIManager.js';
 
 export class Game {
     constructor(canvas) {
@@ -35,6 +40,7 @@ export class Game {
 
         this.villagers = [];
         this.flyingFoods = [];
+        this.hazards = [];
         this.particles = [];
         this.floatingTexts = [];
 
@@ -44,6 +50,12 @@ export class Game {
         this.fever = new FeverMode();
         this.shake = new ScreenShake();
         this.freeze = new ImpactFrame();
+
+        // Phase 5 Systems
+        this.environment = new Environment(this);
+        this.lighting = new LightingSystem(this);
+        this.stageManager = new StageManager(this);
+
         this.background = null;
 
         this.init();
@@ -54,6 +66,10 @@ export class Game {
         await this.assets.loadAll();
         this.background = new ParallaxBackground(this.assets);
         this.state = 'menu';
+
+        // Initialize Stage Logic
+        this.stageManager.init();
+
         this.setupEventListeners();
         this.hideLoading();
     }
@@ -101,6 +117,7 @@ export class Game {
             const [foodKey, food] = foodEntries[index];
             if (food.unlockLevel <= this.level) {
                 this.selectedFoodKey = foodKey;
+                this.ui.updateFoodSelection(); // Reflect keyboard selection in UI
             }
         }
     }
@@ -112,6 +129,11 @@ export class Game {
         this.level = 1;
         this.combo = 0;
         this.maxCombo = 0;
+        this.villagerTimer = 0;
+        this.comboTimer = 0;
+        this.flyingFoods = [];
+        this.hazards = [];
+        this.particles = [];
         this.totalHungerReduced = 0;
         this.selectedFoodKey = 'apple';
         this.gameTime = 0;
@@ -133,6 +155,9 @@ export class Game {
         if (this.audio && this.audio.ctx.state === 'suspended') {
             this.audio.ctx.resume();
         }
+
+        // Show UI
+        this.ui.show();
 
         // Show feed button
         const feedBtn = document.getElementById('touchFeedBtn');
@@ -181,7 +206,11 @@ export class Game {
 
         // Level up
         const newLevel = Math.floor(this.totalHungerReduced / 4) + 1;
-        if (newLevel > this.level) this.levelUp(newLevel);
+        if (newLevel > this.level) {
+            this.levelUp(newLevel);
+            // Notify Stage Manager of potential stage change
+            this.stageManager.update(0); // Check for transition
+        }
 
         // Evolution check
         if (this.caiso.updateEvolution(this.level)) {
@@ -211,6 +240,7 @@ export class Game {
             this.caiso.expression = 'happy';
             this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#ffd700', 60);
             this.audio.play('levelup');
+            this.ui.hide();
             const feedBtn = document.getElementById('touchFeedBtn');
             if (feedBtn) feedBtn.style.display = 'none';
         }
@@ -268,6 +298,7 @@ export class Game {
                 this.state = 'gameover';
                 this.caiso.expression = 'sad';
                 this.audio.play('gameover');
+                this.ui.hide();
                 const feedBtn = document.getElementById('touchFeedBtn');
                 if (feedBtn) feedBtn.style.display = 'none';
             }
@@ -298,6 +329,12 @@ export class Game {
         if (this.freeze.update(deltaTime)) return;
 
         this.gameTime += deltaTime;
+
+        // Phase 5 System Updates
+        this.environment.update(deltaTime);
+        this.lighting.update(deltaTime);
+        this.stageManager.update(deltaTime);
+        this.ui.update();
 
         // Background parallax
         const bgSpeedMult = this.fever.active ? 2.5 : 1.0;
@@ -330,17 +367,36 @@ export class Game {
         this.fever.update(deltaTime);
 
         // Update villagers
-        this.villagers.forEach(v => v.update(deltaTime));
+        this.villagers.forEach(v => v.update(deltaTime, this.environment));
         this.villagers = this.villagers.filter(v => v.active);
 
         // Update flying foods
         this.flyingFoods.forEach((food, index) => {
-            food.update(deltaTime);
+            food.update(deltaTime, this.environment);
+
+            // Hazard collision
+            this.hazards.forEach(hazard => {
+                const dx = food.x - hazard.x;
+                const dy = food.y - hazard.y;
+                if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
+                    // Collision!
+                    food.arrived = true; // Force removal
+                    // remove food without consuming
+                    this.flyingFoods.splice(index, 1);
+                    this.addParticles(food.x, food.y, '#fff', 10);
+                    this.audio.play('hit'); // Assuming hit sound exists or fallback
+                }
+            });
+
             if (food.arrived) {
                 this.consumeFood(food.foodData);
                 this.flyingFoods.splice(index, 1);
             }
         });
+
+        // Update hazards
+        this.hazards.forEach(h => h.update(deltaTime, this.environment));
+        this.hazards = this.hazards.filter(h => h.active);
 
         // Update particles
         this.particles = this.particles.filter(p => {
@@ -387,7 +443,11 @@ export class Game {
         this.shake.apply(ctx);
 
         // Background
+        this.environment.drawBackground(ctx); // Draw sky/ambient color first
         this.background.draw(ctx);
+
+        // Lighting Overlay (Atmosphere)
+        this.lighting.draw(ctx);
 
         // Fever effects
         if (this.fever.active) {
@@ -411,6 +471,9 @@ export class Game {
         // Draw flying foods
         this.flyingFoods.forEach(food => food.draw(ctx));
 
+        // Draw hazards
+        this.hazards.forEach(h => h.draw(ctx));
+
         // Draw particles
         this.particles.forEach(p => {
             ctx.globalAlpha = p.life / 55;
@@ -431,155 +494,14 @@ export class Game {
         });
         ctx.globalAlpha = 1;
 
-        // Draw joystick
         this.joystick.draw(ctx);
 
         ctx.restore();
 
-        // Draw UI
-        this.drawUI();
+        // UI is now handled by UIManager (DOM Overlay)
     }
 
-    drawUI() {
-        const ctx = this.ctx;
-
-        // Top HUD background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HUD_HEIGHT);
-
-        // Hunger bar
-        const barX = 80;
-        const barWidth = GAME_CONFIG.WIDTH - 130;
-        const barY = 18;
-        const barHeight = 24;
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        if (ctx.roundRect) ctx.beginPath(); ctx.roundRect(barX, barY, barWidth, barHeight, 12); ctx.fill();
-        // else fallback... reusing fillStyle
-
-        const hungerWidth = barWidth * (this.hunger / 100);
-        const hGrad = ctx.createLinearGradient(barX, 0, barX + hungerWidth, 0);
-        if (this.hunger > 50) {
-            hGrad.addColorStop(0, '#e74c3c');
-            hGrad.addColorStop(1, '#c0392b');
-        } else if (this.hunger > 25) {
-            hGrad.addColorStop(0, '#f39c12');
-            hGrad.addColorStop(1, '#e67e22');
-        } else {
-            hGrad.addColorStop(0, '#2ecc71');
-            hGrad.addColorStop(1, '#27ae60');
-        }
-        ctx.fillStyle = hGrad;
-        if (ctx.roundRect) {
-            ctx.beginPath();
-            ctx.roundRect(barX + 2, barY + 2, Math.max(0, hungerWidth - 4), barHeight - 4, 10);
-            ctx.fill();
-        } else {
-            ctx.fillRect(barX + 2, barY + 2, Math.max(0, hungerWidth - 4), barHeight - 4);
-        }
-
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px Fredoka One';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${this.hunger.toFixed(1)}%`, barX + barWidth / 2, barY + 17);
-
-        // Level badge
-        ctx.fillStyle = 'rgba(0, 212, 255, 0.3)';
-        ctx.beginPath();
-        ctx.arc(40, 30, 26, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#00d4ff';
-        ctx.font = 'bold 18px Fredoka One';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.level, 40, 36);
-
-        // Combo display
-        if (this.combo >= 3) {
-            const comboColor = this.combo >= 15 ? '#ff006e' :
-                this.combo >= 10 ? '#e74c3c' :
-                    this.combo >= 5 ? '#f39c12' : '#f1c40f';
-            ctx.fillStyle = comboColor;
-            ctx.font = 'bold 16px Fredoka One';
-            ctx.textAlign = 'right';
-            ctx.fillText(`x${this.combo}`, GAME_CONFIG.WIDTH - 50, 55);
-        }
-
-        // Fever gauge
-        this.fever.drawGauge(ctx);
-
-        // Villager counter
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        if (ctx.roundRect) {
-            ctx.beginPath();
-            ctx.roundRect(10, GAME_CONFIG.HEIGHT - 130, 80, 50, 10);
-            ctx.fill();
-        } else {
-            ctx.fillRect(10, GAME_CONFIG.HEIGHT - 130, 80, 50);
-        }
-
-        const vColor = this.villagerCount > 50 ? '#2ecc71' :
-            this.villagerCount > 25 ? '#f39c12' : '#e74c3c';
-        ctx.fillStyle = vColor;
-        ctx.font = 'bold 22px Fredoka One';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${this.villagerCount}`, 50, GAME_CONFIG.HEIGHT - 100);
-        ctx.font = '11px Nunito';
-        ctx.fillStyle = '#fff';
-        ctx.fillText('VILLAGERS', 50, GAME_CONFIG.HEIGHT - 85);
-
-        // Timer bar
-        const consumeInterval = this.fever.active ?
-            GAME_CONFIG.VILLAGER_CONSUME_INTERVAL * 1.5 :
-            GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
-        const timerProgress = this.villagerTimer / consumeInterval;
-
-        ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
-        ctx.fillRect(0, GAME_CONFIG.HEIGHT - 6, GAME_CONFIG.WIDTH, 6);
-        ctx.fillStyle = `rgb(231, ${Math.floor(76 + (1 - timerProgress) * 100)}, 60)`;
-        ctx.fillRect(0, GAME_CONFIG.HEIGHT - 6, GAME_CONFIG.WIDTH * timerProgress, 6);
-
-        // Food selector
-        this.drawFoodSelector();
-    }
-
-    drawFoodSelector() {
-        const ctx = this.ctx;
-        const startX = 100;
-        const y = GAME_CONFIG.HEIGHT - 130;
-        const spacing = 55;
-
-        const foods = Object.entries(FOODS);
-        foods.slice(0, 4).forEach(([key, food], index) => {
-            const x = startX + index * spacing;
-            const isUnlocked = food.unlockLevel <= this.level;
-            const isSelected = key === this.selectedFoodKey;
-
-            ctx.fillStyle = isSelected ? 'rgba(108, 92, 231, 0.6)' : 'rgba(0, 0, 0, 0.4)';
-            if (ctx.roundRect) {
-                ctx.beginPath();
-                ctx.roundRect(x - 20, y - 5, 45, 45, 8);
-                ctx.fill();
-            } else {
-                ctx.fillRect(x - 20, y - 5, 45, 45);
-            }
-
-            if (isSelected) {
-                ctx.strokeStyle = '#a29bfe';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-
-            const img = this.assets.get(food.asset);
-            if (img && isUnlocked) {
-                ctx.drawImage(img, x - 15, y, 35, 35);
-            } else {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('🔒', x + 2, y + 25);
-            }
-        });
-    }
+    // drawUI removed - replaced by UIManager
 
     drawMenuScreen() {
         const ctx = this.ctx;

@@ -13,18 +13,28 @@ export class Food {
         this.elapsed = 0;
         this.rotation = 0;
         this.arrived = false;
+        this.driftX = 0;
     }
 
-    update(deltaTime) {
+    update(deltaTime, environment) {
         this.elapsed += deltaTime;
         this.progress = Math.min(this.elapsed / this.duration, 1);
 
+        // Environmental Physics
+        if (environment) {
+            this.driftX += environment.windX * (deltaTime / 16);
+        }
+
         // Ease out
         const t = 1 - Math.pow(1 - this.progress, 3);
-        this.x = this.startX + (this.endX - this.startX) * t;
+        this.x = this.startX + (this.endX - this.startX) * t + this.driftX;
 
         // Arc trajectory
-        const controlY = Math.min(this.startY, this.endY) - 150;
+        let gravityScale = environment ? environment.gravityY : 1.0;
+        // avoid division by zero
+        if (gravityScale < 0.1) gravityScale = 0.1;
+
+        const controlY = Math.min(this.startY, this.endY) - (150 / gravityScale);
         this.y = (1 - t) * (1 - t) * this.startY +
             2 * (1 - t) * t * controlY +
             t * t * this.endY;

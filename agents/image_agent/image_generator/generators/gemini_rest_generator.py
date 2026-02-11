@@ -33,10 +33,10 @@ class GeminiRestGenerator(BaseGenerator):
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
     # Models for image generation
-    # Imagen 3 for dedicated image generation
-    IMAGEN_MODEL = "imagen-3.0-generate-001"
+    # Imagen 4 for dedicated image generation
+    IMAGEN_MODEL = "imagen-4.0-generate-001"
     # Gemini for multimodal (fallback)
-    TEXT_MODEL = "gemini-1.5-flash"
+    TEXT_MODEL = "gemini-3-pro-preview"
 
     # Supported image sizes
     SUPPORTED_SIZES = [

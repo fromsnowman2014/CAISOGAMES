@@ -18,13 +18,19 @@ export class Villager {
         this.squash = new SquashStretch();
     }
 
-    update(deltaTime) {
+    update(deltaTime, environment) {
         if (!this.active) return;
 
         // Move toward center (where Caiso is in vertical layout)
         const moveSpeed = this.speed * (this.scared ? 0.6 : 1) * (deltaTime / 16);
         const direction = this.fromLeft ? 1 : -1;
-        this.x += moveSpeed * direction;
+
+        let windFactor = 0;
+        if (environment) {
+            windFactor = environment.windX * 0.5; // Villagers affect less by wind?
+        }
+
+        this.x += (moveSpeed * direction) + windFactor;
 
         // Get scared when close to center
         const distToCenter = Math.abs(this.x - this.targetX);

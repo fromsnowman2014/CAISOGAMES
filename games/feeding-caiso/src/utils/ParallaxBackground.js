@@ -4,7 +4,7 @@ export class ParallaxBackground {
     constructor(assets) {
         this.assets = assets;
         this.layers = [
-            { key: 'bg_sky', speed: 0, y: 0, height: 300, offset: 0 },
+            // Sky moved to Environment.js
             { key: 'bg_clouds', speed: 0.15, y: 100, height: 150, offset: 0 },
             { key: 'bg_city', speed: 0.3, y: 350, height: 250, offset: 0 },
             { key: 'bg_ground', speed: 0.6, y: 550, height: 304, offset: 0 }
