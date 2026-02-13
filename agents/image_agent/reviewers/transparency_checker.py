@@ -55,9 +55,23 @@ class TransparencyChecker:
 
         if not report.has_alpha_channel:
             if expected_transparent:
+                # Check if it has a white background (which is acceptable for Phase 6 pipeline)
+                if image.mode == 'RGB':
+                    is_white_bg = self._check_background(
+                        image, list(image.getdata()), image.width, image.height, check_white_bg=True
+                    )
+                    if is_white_bg:
+                        report.background_transparent = True
+                        report.recommendation = "Background is white (convert to transparent)"
+                        # Give it a passing score but not perfect
+                        report.transparent_percentage = 0.0
+                        report.opaque_percentage = 100.0
+                        report.transparency_cleanliness = 0.9
+                        return report
+
                 report.artifacts.append("No alpha channel present")
                 report.recommendation = "Convert to RGBA format"
-            return report
+                return report
 
         # Convert to RGBA if needed
         if image.mode != 'RGBA':
@@ -78,7 +92,7 @@ class TransparencyChecker:
         report.semi_transparent_percentage = semi_count / total * 100
 
         # Check background transparency (sample corners and edges)
-        report.background_transparent = self._check_background(image, pixels, width, height)
+        report.background_transparent = self._check_background(image, pixels, width, height, check_white_bg=True)
 
         # Check edge quality
         edge_quality, edge_issues = self._check_edge_quality(image, pixels, width, height)
@@ -103,9 +117,10 @@ class TransparencyChecker:
         image: Image.Image,
         pixels: List[Tuple],
         width: int,
-        height: int
+        height: int,
+        check_white_bg: bool = False
     ) -> bool:
-        """Check if background (corners and edges) is transparent"""
+        """Check if background (corners and edges) is transparent or solid white"""
         margin = self.BACKGROUND_SAMPLE_MARGIN
 
         # Sample corner regions
@@ -117,21 +132,41 @@ class TransparencyChecker:
         ]
 
         transparent_corners = 0
+        white_corners = 0
+
         for x1, y1, x2, y2 in corners:
             corner_transparent = True
+            corner_white = True
+            
             for y in range(y1, min(y2, height)):
                 for x in range(x1, min(x2, width)):
                     idx = y * width + x
-                    if idx < len(pixels) and pixels[idx][3] > self.TRANSPARENCY_THRESHOLD:
+                    if idx >= len(pixels):
+                        continue
+                        
+                    pixel = pixels[idx]
+                    
+                    # Check transparency
+                    if len(pixel) > 3 and pixel[3] > self.TRANSPARENCY_THRESHOLD:
                         corner_transparent = False
-                        break
-                if not corner_transparent:
-                    break
+                    
+                    # Check white (RGB > 240)
+                    if pixel[0] < 240 or pixel[1] < 240 or pixel[2] < 240:
+                        corner_white = False
+            
             if corner_transparent:
                 transparent_corners += 1
+            if corner_white:
+                white_corners += 1
 
-        # At least 3 of 4 corners should be transparent
-        return transparent_corners >= 3
+        # Accept if corners are transparent OR white (if allowed)
+        if transparent_corners >= 3:
+            return True
+        
+        if check_white_bg and white_corners >= 3:
+            return True
+            
+        return False
 
     def _check_edge_quality(
         self,

@@ -203,9 +203,12 @@ class PromptGenerator:
 
         # Transparency modifier
         if request.transparency:
-            modifiers.append('transparent background')
-            modifiers.append('isolated on transparent')
-            modifiers.append('PNG with alpha')
+            # User requirement: Force white background for easier extraction
+            modifiers.append('isolated on solid white background')
+            modifiers.append('white background')
+            modifiers.append('clean background')
+            modifiers.append('no shadows')
+            modifiers.append('no background details')
 
         # Color palette
         if request.color_palette:
@@ -245,7 +248,7 @@ class PromptGenerator:
 
         # Transparency
         if request.transparency:
-            specs.append('with alpha channel')
+            specs.append('white background for masking')
 
         return ', '.join(specs)
 
@@ -271,6 +274,13 @@ class PromptGenerator:
             'watermark',
             'signature',
             'text',
+            'typography',
+            'letters',
+            'words',
+            'alphabet',
+            'numbers',
+            'speech bubble',
+            'label',
             'logo',
             'border',
             'frame',
@@ -281,9 +291,13 @@ class PromptGenerator:
         # Add transparency-related negatives
         if request.transparency:
             common_negatives.extend([
-                'background',
-                'solid background',
-                'colored background',
+                'complex background',
+                'patterned background',
+                'gradient background',
+                'noise',
+                'dithering',
+                'shadows',
+                'contact shadows',
             ])
 
         negatives.extend(common_negatives)
