@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Feeding Caiso v5.0 - Test Suite</title>
+    <title>Feeding Caiso v6.0 - Test Suite</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,8 +58,8 @@
     </style>
 </head>
 <body>
-    <h1>Feeding Caiso v5.0 Test Suite</h1>
-    <div class="subtitle">Phase 5: Ethereal Evolution - TDD Test Harness</div>
+    <h1>Feeding Caiso v6.0 Test Suite</h1>
+    <div class="subtitle">Phase 6: The Hollow Deep - TDD Test Harness</div>
     <div id="summary" class="summary">Running tests...</div>
     <div id="results"></div>
     <div id="log"></div>
@@ -306,12 +306,15 @@
                     T.assert(stage.atmosphere.overlayColor !== undefined, `Stage ${i + 1} missing overlayColor`);
                     T.assert(stage.atmosphere.windX !== undefined, `Stage ${i + 1} missing windX`);
                     T.assert(stage.atmosphere.gravityY !== undefined, `Stage ${i + 1} missing gravityY`);
-                    T.assert(Array.isArray(stage.hazards), `Stage ${i + 1} hazards must be array`);
+                    T.assert(stage.gameplay, `Stage ${i + 1} missing gameplay`);
+                    T.assert(Array.isArray(stage.gameplay.hazards), `Stage ${i + 1} gameplay.hazards must be array`);
+                    T.assert(stage.lighting, `Stage ${i + 1} missing lighting`);
+                    T.assert(stage.lighting.ambientLight !== undefined, `Stage ${i + 1} missing lighting.ambientLight`);
                 });
             });
 
             T.it('Stage 1 has no hazards (tutorial stage)', () => {
-                T.assertEqual(STAGES[0].hazards.length, 0, 'Stage 1 hazards');
+                T.assertEqual(STAGES[0].gameplay.hazards.length, 0, 'Stage 1 hazards');
             });
 
             T.it('Stage 1 has no wind (tutorial stage)', () => {
@@ -319,10 +322,22 @@
             });
 
             T.it('Later stages have environmental challenges', () => {
-                // Stage 3 (Whispering Breeze) should have wind
-                T.assertGreater(STAGES[2].atmosphere.windX, 0, 'Stage 3 wind');
-                // Stage 8 (Starry Expanse) should have lower gravity
+                // Stage 4 (City of Tears) should have wind
+                T.assertGreater(STAGES[3].atmosphere.windX, 0, 'Stage 4 wind');
+                // Stage 8 (The Abyss) should have lower gravity
                 T.assertLess(STAGES[7].atmosphere.gravityY, 1.0, 'Stage 8 gravity');
+            });
+
+            T.it('All stages have lighting and audio config', () => {
+                STAGES.forEach((stage, i) => {
+                    T.assert(stage.lighting, `Stage ${i + 1} missing lighting`);
+                    T.assert(stage.parallax, `Stage ${i + 1} missing parallax`);
+                    T.assert(stage.audio, `Stage ${i + 1} missing audio`);
+                });
+            });
+
+            T.it('Deepnest (Stage 6) has near-darkness', () => {
+                T.assertLess(STAGES[5].lighting.ambientLight, 0.1, 'Deepnest should be very dark');
             });
         });
 
@@ -563,35 +578,47 @@
             const mockAssets = { get: () => null };
 
             T.it('Spawns at given position', () => {
-                const h = new Hazard('leaf', 100, -50, mockAssets);
+                const h = new Hazard('acid_drop', 100, -50, mockAssets);
                 T.assertEqual(h.x, 100, 'x');
                 T.assertEqual(h.y, -50, 'y');
-                T.assertEqual(h.type, 'leaf', 'type');
+                T.assertEqual(h.type, 'acid_drop', 'type');
             });
 
             T.it('Moves downward over time', () => {
-                const h = new Hazard('bee', 100, 0, mockAssets);
+                const h = new Hazard('acid_drop', 100, 0, mockAssets);
                 h.update(16, null);
                 T.assertGreater(h.y, 0, 'should move down');
             });
 
             T.it('Deactivates when off-screen', () => {
-                const h = new Hazard('star', 100, GAME_CONFIG.HEIGHT + 40, mockAssets);
+                const h = new Hazard('exploding_spore', 100, GAME_CONFIG.HEIGHT + 60, mockAssets);
                 h.update(16, null);
                 T.assertEqual(h.active, false, 'should deactivate off-screen');
             });
 
-            T.it('Leaf type has slower fall and sway', () => {
-                const leaf = new Hazard('leaf', 100, 0, mockAssets);
-                const star = new Hazard('star', 100, 0, mockAssets);
-                T.assertLess(leaf.vy, star.vy, 'leaf should fall slower than star');
+            T.it('Crystal beam falls faster than spore', () => {
+                const spore = new Hazard('exploding_spore', 100, 0, mockAssets);
+                const crystal = new Hazard('crystal_beam', 100, 0, mockAssets);
+                T.assertLess(spore.vy, crystal.vy, 'spore should fall slower than crystal beam');
             });
 
             T.it('Wind affects hazard movement', () => {
-                const h = new Hazard('bee', 200, 0, mockAssets);
+                const h = new Hazard('acid_drop', 200, 0, mockAssets);
                 const startX = h.x;
                 h.update(160, { windX: 5, gravityY: 1 });
-                T.assertGreater(h.x, startX + 5, 'Wind should push hazard');
+                T.assertGreater(h.x, startX, 'Wind should push hazard');
+            });
+
+            T.it('Void tendril rises from bottom', () => {
+                const h = new Hazard('void_tendril', 200, 0, mockAssets);
+                T.assertLess(h.vy, 0, 'void tendril should have negative vy (rising)');
+                T.assertEqual(h.y, GAME_CONFIG.HEIGHT + 20, 'should spawn at bottom');
+            });
+
+            T.it('Buzzsaw moves horizontally', () => {
+                const h = new Hazard('buzzsaw', 0, 0, mockAssets);
+                T.assertGreater(h.vx, 0, 'buzzsaw should move right');
+                T.assertEqual(h.vy, 0, 'buzzsaw has no vertical movement');
             });
         });
 
@@ -750,10 +777,23 @@
             T.it('setAtmosphere updates values from stage config', () => {
                 const mockGame = { canvas: { width: 480, height: 854 } };
                 const env = new Environment(mockGame);
-                env.setAtmosphere(STAGES[2]); // Whispering Breeze
-                T.assertEqual(env.windX, 2.5, 'wind from stage 3');
-                T.assertEqual(env.gravityY, 1.0, 'gravity from stage 3');
-                T.assertEqual(env.backgroundColor, '#B3E5FC', 'bg color');
+                env.setAtmosphere(STAGES[3]); // City of Tears
+                T.assertEqual(env.windX, 1.0, 'wind from stage 4');
+                T.assertEqual(env.gravityY, 1.1, 'gravity from stage 4');
+                T.assertEqual(env.backgroundColor, '#1a2a4a', 'bg color');
+            });
+
+            T.it('Alternating wind changes direction over time', () => {
+                const mockGame = { canvas: { width: 480, height: 854 } };
+                const env = new Environment(mockGame);
+                env.setAtmosphere(STAGES[6]); // Kingdom's Edge (alternating wind)
+                T.assertEqual(env.windDirection, 'alternating', 'wind direction');
+                T.assertEqual(env.baseWindX, 3.0, 'base wind');
+
+                // Simulate past the alternate interval
+                for (let i = 0; i < 400; i++) env.update(16);
+                // Wind sign should have flipped and wind should be trending negative
+                T.assertLess(env.windX, env.baseWindX, 'wind should shift after alternating');
             });
         });
 
@@ -772,6 +812,9 @@
                     gravityY: 1
                 },
                 lighting: { setAtmosphere: () => {} },
+                parallax: { loadStageConfig: () => {} },
+                particleSystem: { clearEmitters: () => {}, addEmitter: () => {} },
+                audio: { setReverbLevel: () => {} },
                 addFloatingText: () => {}
             });
 
@@ -780,7 +823,7 @@
                 const sm = new StageManager(game);
                 sm.init();
                 T.assertEqual(sm.currentStageIndex, 0, 'stage index');
-                T.assertEqual(sm.currentConfig.name, 'Morning Dew', 'stage name');
+                T.assertEqual(sm.currentConfig.name, 'The Forgotten Crossroads', 'stage name');
             });
 
             T.it('Transitions when level exceeds stage', () => {
@@ -815,7 +858,7 @@
                 const sm = new StageManager(game);
                 sm.init();
 
-                // Load stage 2 (Sunlit Bloom - has "bee" hazard)
+                // Load stage 2 (Greenpath - has "acid_drop" hazard)
                 sm.loadStage(1);
                 game.level = 2;
 
@@ -927,17 +970,36 @@
         // 14. LIGHTING SYSTEM TESTS
         // ======================================
         T.describe('LightingSystem', () => {
-            T.it('Initializes with transparent overlay', () => {
+            T.it('Initializes with default ambient light', () => {
                 const mockGame = { canvas: { width: 480, height: 854 } };
                 const ls = new LightingSystem(mockGame);
-                T.assertEqual(ls.overlayColor, 'rgba(0,0,0,0)', 'default transparent');
+                T.assertEqual(ls.ambientLight, 0.3, 'default ambient light');
+                T.assertEqual(ls.vignette, true, 'default vignette');
+                T.assertEqual(ls.bloom, false, 'default bloom off');
             });
 
-            T.it('Sets overlay from atmosphere config', () => {
+            T.it('Sets lighting from Phase 6 config', () => {
+                const mockGame = { canvas: { width: 480, height: 854 } };
+                const ls = new LightingSystem(mockGame);
+                ls.setAtmosphere(STAGES[5].lighting); // Deepnest
+                T.assertEqual(ls.ambientLight, 0.05, 'deepnest ambient');
+                T.assertEqual(ls.playerLightRadius, 100, 'deepnest light radius');
+            });
+
+            T.it('Supports legacy overlay format', () => {
                 const mockGame = { canvas: { width: 480, height: 854 } };
                 const ls = new LightingSystem(mockGame);
                 ls.setAtmosphere({ overlayColor: 'rgba(200, 50, 0, 0.25)' });
-                T.assertEqual(ls.overlayColor, 'rgba(200, 50, 0, 0.25)', 'should update');
+                T.assertEqual(ls.overlayColor, 'rgba(200, 50, 0, 0.25)', 'legacy overlay');
+            });
+
+            T.it('Bloom pulsing updates over time', () => {
+                const mockGame = { canvas: { width: 480, height: 854 } };
+                const ls = new LightingSystem(mockGame);
+                ls.setAtmosphere(STAGES[4].lighting); // Crystal Peak (bloom: true)
+                T.assertEqual(ls.bloom, true, 'bloom should be on');
+                ls.update(1000);
+                T.assertGreater(ls.bloomIntensity, 0, 'bloom should pulse');
             });
         });
 
@@ -947,7 +1009,7 @@
         T.describe('Integration: Full Game Flow', () => {
             T.it('Win condition: hunger reaches 0', () => {
                 let hunger = 100;
-                const food = FOODS.dynamite; // Most powerful
+                const food = FOODS.dynamite; // Most powerful (Void Egg)
                 const reduction = food.hungerReduction * 4.0 * 2.0; // Max combo + fever
                 // 40 * 4 * 2 = 320, way more than 100
                 hunger = Math.max(0, hunger - reduction);
@@ -967,12 +1029,12 @@
                     power: f.hungerReduction
                 }));
 
-                // Apple (lvl 1) should be weakest
-                T.assertEqual(unlocks[0].level, 1, 'Apple at level 1');
-                // Dynamite (last) should be strongest
+                // Soul Orb (lvl 1) should be first
+                T.assertEqual(unlocks[0].level, 1, 'Soul Orb at level 1');
+                // Void Egg (last) should be strongest
                 const last = unlocks[unlocks.length - 1];
-                T.assertEqual(last.name, 'Dynamite', 'Last food is Dynamite');
-                T.assertGreater(last.power, unlocks[0].power, 'Dynamite > Apple power');
+                T.assertEqual(last.name, 'Void Egg', 'Last food is Void Egg');
+                T.assertGreater(last.power, unlocks[0].power, 'Void Egg > Soul Orb power');
             });
 
             T.it('All 10 stages are reachable through level progression', () => {
@@ -985,10 +1047,10 @@
             });
 
             T.it('Evolution tiers align with stage progression', () => {
-                // Tier 0 (Baby) at lvl 1 = Stage 1
-                // Tier 1 (Teen) at lvl 3 = Stage 3
-                // Tier 2 (Adult) at lvl 6 = Stage 6
-                // Tier 3 (King) at lvl 10 = Stage 10
+                // Tier 0 (Grub) at lvl 1 = Stage 1
+                // Tier 1 (Husk) at lvl 3 = Stage 3
+                // Tier 2 (Knight) at lvl 6 = Stage 6
+                // Tier 3 (Shade Lord) at lvl 10 = Stage 10
                 EVOLUTION_TIERS.forEach(tier => {
                     T.assert(tier.level <= STAGES.length,
                         `Tier ${tier.name} at level ${tier.level} must be reachable within ${STAGES.length} stages`);

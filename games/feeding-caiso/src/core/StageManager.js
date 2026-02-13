@@ -14,6 +14,11 @@ export class StageManager {
         this.pendingStageIndex = -1;
         this.hazardTimer = 0;
         this.currentConfig = STAGES[0];
+
+        // Stage name display
+        this.stageNameAlpha = 0;
+        this.stageNameTimer = 0;
+        this.stageNameDuration = 2500;
     }
 
     init() {
@@ -23,6 +28,8 @@ export class StageManager {
         this.transitionTimer = 0;
         this.pendingStageIndex = -1;
         this.hazardTimer = 0;
+        this.stageNameAlpha = 0;
+        this.stageNameTimer = 0;
         this.loadStage(0);
     }
 
@@ -33,14 +40,33 @@ export class StageManager {
         const config = STAGES[index];
         this.currentConfig = config;
 
-        console.log(`Loading Stage ${index + 1}: ${config.name}`);
-
+        // Core systems
         this.game.environment.setAtmosphere(config);
-        this.game.lighting.setAtmosphere(config.atmosphere);
+        this.game.lighting.setAtmosphere(config.lighting);
 
-        if (this.game.addFloatingText) {
-            this.game.addFloatingText(`Stage ${index + 1}: ${config.name}`, this.game.canvas.width / 2, 100, '#fff');
+        // Parallax system
+        if (this.game.parallax) {
+            this.game.parallax.loadStageConfig(config.parallax);
         }
+
+        // Particle system (environmental emitters)
+        if (this.game.particleSystem) {
+            this.game.particleSystem.clearEmitters();
+            if (config.particles && config.particles.emitters) {
+                config.particles.emitters.forEach(e => {
+                    this.game.particleSystem.addEmitter(e);
+                });
+            }
+        }
+
+        // Audio
+        if (this.game.audio && config.audio) {
+            this.game.audio.setReverbLevel(config.audio.reverbLevel || 0);
+        }
+
+        // Stage name display
+        this.stageNameAlpha = 1;
+        this.stageNameTimer = 0;
     }
 
     startTransition(nextIndex) {
@@ -56,23 +82,28 @@ export class StageManager {
     }
 
     update(deltaTime) {
+        // Stage name fade
+        if (this.stageNameAlpha > 0) {
+            this.stageNameTimer += deltaTime;
+            if (this.stageNameTimer > this.stageNameDuration * 0.6) {
+                this.stageNameAlpha = Math.max(0, this.stageNameAlpha - deltaTime * 0.003);
+            }
+        }
+
         // Stage transition animation
         if (this.isTransitioning) {
             this.transitionTimer += deltaTime;
             const progress = this.transitionTimer / this.transitionDuration;
 
             if (progress < 0.5) {
-                // Fade to black
                 this.transitionAlpha = progress * 2;
             } else if (progress < 0.55) {
-                // At midpoint, load the new stage
                 if (this.pendingStageIndex >= 0) {
                     this.loadStage(this.pendingStageIndex);
                     this.pendingStageIndex = -1;
                 }
                 this.transitionAlpha = 1;
             } else {
-                // Fade from black
                 this.transitionAlpha = 1 - ((progress - 0.5) * 2);
             }
 
@@ -89,7 +120,9 @@ export class StageManager {
         }
 
         // Hazard Spawning
-        const hazards = this.currentConfig.hazards;
+        const gameplay = this.currentConfig.gameplay;
+        const hazards = gameplay ? gameplay.hazards : (this.currentConfig.hazards || []);
+
         if (hazards && hazards.length > 0) {
             this.hazardTimer += deltaTime;
             const spawnInterval = Math.max(500, 2000 - (this.game.level * 100));
@@ -107,6 +140,41 @@ export class StageManager {
     }
 
     draw(ctx) {
+        // Stage name overlay
+        if (this.stageNameAlpha > 0 && this.currentConfig) {
+            ctx.save();
+            ctx.globalAlpha = this.stageNameAlpha;
+            ctx.fillStyle = '#dfe6e9';
+            ctx.font = 'bold 22px Fredoka One';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 8;
+            ctx.fillText(
+                `Stage ${this.currentStageIndex + 1}`,
+                GAME_CONFIG.WIDTH / 2,
+                GAME_CONFIG.HEIGHT / 2 - 30
+            );
+            ctx.font = '16px Nunito';
+            ctx.fillStyle = '#b2bec3';
+            ctx.fillText(
+                this.currentConfig.name,
+                GAME_CONFIG.WIDTH / 2,
+                GAME_CONFIG.HEIGHT / 2
+            );
+            if (this.currentConfig.nameKo) {
+                ctx.font = '13px Nunito';
+                ctx.fillStyle = '#636e72';
+                ctx.fillText(
+                    this.currentConfig.nameKo,
+                    GAME_CONFIG.WIDTH / 2,
+                    GAME_CONFIG.HEIGHT / 2 + 22
+                );
+            }
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        // Transition overlay
         if (this.isTransitioning && this.transitionAlpha > 0) {
             ctx.fillStyle = `rgba(0, 0, 0, ${this.transitionAlpha})`;
             ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);

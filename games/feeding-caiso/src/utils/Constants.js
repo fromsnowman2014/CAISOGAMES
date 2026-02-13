@@ -13,19 +13,19 @@ export const GAME_CONFIG = {
 };
 
 export const FOODS = {
-    apple:      { name: 'Apple',      color: '#e74c3c', hungerReduction: 8,  unlockLevel: 1, asset: 'food_apple',      weight: 1.0 },
-    burger:     { name: 'Burger',     color: '#f39c12', hungerReduction: 15, unlockLevel: 2, asset: 'food_burger',     weight: 1.2 },
-    pizza:      { name: 'Pizza',      color: '#f1c40f', hungerReduction: 22, unlockLevel: 3, asset: 'food_pizza',      weight: 1.4 },
-    dorito:     { name: 'Dorito',     color: '#e056fd', hungerReduction: 12, unlockLevel: 4, asset: 'food_dorito',     weight: 0.8 },
-    watermelon: { name: 'Watermelon', color: '#2ecc71', hungerReduction: 30, unlockLevel: 5, asset: 'food_watermelon', weight: 1.5 },
-    dynamite:   { name: 'Dynamite',   color: '#e74c3c', hungerReduction: 40, unlockLevel: 7, asset: 'food_dynamite',   weight: 2.0 }
+    apple:      { name: 'Soul Orb',      color: '#74b9ff', hungerReduction: 8,  unlockLevel: 1, asset: 'food_apple',      weight: 1.0 },
+    burger:     { name: 'Geo Cluster',   color: '#b2bec3', hungerReduction: 15, unlockLevel: 2, asset: 'food_burger',     weight: 1.2 },
+    pizza:      { name: 'Pale Ore',      color: '#dfe6e9', hungerReduction: 22, unlockLevel: 3, asset: 'food_pizza',      weight: 1.4 },
+    dorito:     { name: "King's Idol",   color: '#ffeaa7', hungerReduction: 12, unlockLevel: 4, asset: 'food_dorito',     weight: 0.8 },
+    watermelon: { name: 'Lifeblood',     color: '#0984e3', hungerReduction: 30, unlockLevel: 5, asset: 'food_watermelon', weight: 1.5 },
+    dynamite:   { name: 'Void Egg',      color: '#a29bfe', hungerReduction: 40, unlockLevel: 7, asset: 'food_dynamite',   weight: 2.0 }
 };
 
 export const EVOLUTION_TIERS = [
-    { level: 1,  name: 'Baby Caiso',  scale: 0.8, sprite: 'caiso_idle' },
-    { level: 3,  name: 'Teen Caiso',  scale: 1.0, sprite: 'caiso_idle' },
-    { level: 6,  name: 'Adult Caiso', scale: 1.2, sprite: 'caiso_idle' },
-    { level: 10, name: 'King Caiso',  scale: 1.5, sprite: 'caiso_idle' }
+    { level: 1,  name: 'Grub',        scale: 0.8, sprite: 'caiso_idle' },
+    { level: 3,  name: 'Husk',        scale: 1.0, sprite: 'caiso_idle' },
+    { level: 6,  name: 'Knight',      scale: 1.2, sprite: 'caiso_idle' },
+    { level: 10, name: 'Shade Lord',  scale: 1.5, sprite: 'caiso_idle' }
 ];
 
 export const FEVER_CONFIG = {

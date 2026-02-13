@@ -2,7 +2,8 @@ import { GAME_CONFIG, FOODS, EVOLUTION_TIERS, FEVER_CONFIG } from '../utils/Cons
 import { AssetManager } from '../managers/AssetManager.js';
 import { AudioManager } from './Audio.js';
 import { VirtualJoystick } from './Input.js';
-import { ParallaxBackground } from '../utils/ParallaxBackground.js';
+import { ParallaxSystem } from '../systems/ParallaxSystem.js';
+import { ParticleSystem } from '../systems/ParticleSystem.js';
 import { FeverMode } from '../utils/FeverMode.js';
 import { ScreenShake, ImpactFrame } from '../utils/Juice.js';
 import { Caiso } from '../entities/Caiso.js';
@@ -44,7 +45,6 @@ export class Game {
         this.villagers = [];
         this.flyingFoods = [];
         this.hazards = [];
-        this.particles = [];
         this.floatingTexts = [];
 
         this.caiso = new Caiso();
@@ -57,17 +57,15 @@ export class Game {
         this.environment = new Environment(this);
         this.lighting = new LightingSystem(this);
         this.stageManager = new StageManager(this);
-
-        this.background = null;
+        this.parallax = new ParallaxSystem(this);
+        this.particleSystem = new ParticleSystem(this);
 
         this.init();
     }
 
     async init() {
         try {
-            console.log("Feeding Caiso v5.0 - Refactored");
             await this.assets.loadAll();
-            this.background = new ParallaxBackground(this.assets);
             this.ui = new UIManager(this);
             this.state = 'menu';
 
@@ -145,10 +143,11 @@ export class Game {
         this.consumeInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
         this.flyingFoods = [];
         this.hazards = [];
-        this.particles = [];
         this.floatingTexts = [];
         this.caiso.reset();
         this.fever = new FeverMode();
+        this.particleSystem.clearEmitters();
+        this.particleSystem.active = [];
         this.stageManager.init();
 
         this.villagers = [];
@@ -195,6 +194,12 @@ export class Game {
     consumeFood(foodData) {
         const feverMult = this.fever.getMultiplier();
         const comboMult = this.getComboMultiplier();
+
+        // Stage score multiplier
+        const stageScoreMult = this.stageManager.currentConfig.gameplay
+            ? (this.stageManager.currentConfig.gameplay.scoreMultiplier || 1.0)
+            : 1.0;
+
         const reduction = foodData.hungerReduction * comboMult * feverMult;
 
         this.hunger = Math.max(0, this.hunger - reduction);
@@ -203,15 +208,14 @@ export class Game {
         this.combo++;
         if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
-        // Score: base points + combo bonus + fever bonus
-        const basePoints = Math.round(reduction * 10);
+        const basePoints = Math.round(reduction * 10 * stageScoreMult);
         this.score += basePoints;
 
         const wasFeverActive = this.fever.active;
         this.fever.charge(FEVER_CONFIG.chargeRate + (this.combo > 3 ? FEVER_CONFIG.comboBonus : 0));
         if (!wasFeverActive && this.fever.active) {
             this.audio.play('fever');
-            this.addFloatingText('FEVER MODE!', GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 50, '#ff006e');
+            this.addFloatingText('SOUL SURGE!', GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 50, '#74b9ff');
         }
 
         const newLevel = Math.floor(this.totalHungerReduced / GAME_CONFIG.HUNGER_PER_LEVEL) + 1;
@@ -222,16 +226,16 @@ export class Game {
 
         if (this.caiso.updateEvolution(this.level)) {
             const tier = EVOLUTION_TIERS[this.caiso.evolutionTier];
-            this.addFloatingText(`EVOLVED: ${tier.name}!`, GAME_CONFIG.WIDTH / 2, 200, '#ff006e');
-            this.addParticles(GAME_CONFIG.WIDTH / 2, 180, '#ff006e', 35);
+            this.addFloatingText(`EVOLVED: ${tier.name}!`, GAME_CONFIG.WIDTH / 2, 200, '#a29bfe');
+            this.addParticles(GAME_CONFIG.WIDTH / 2, 180, '#a29bfe', 35);
             this.audio.play('levelup');
         }
 
         const mouthPos = this.caiso.getMouthPosition();
-        this.addFloatingText(`-${reduction.toFixed(1)}%`, mouthPos.x, mouthPos.y - 60, '#2ed573');
+        this.addFloatingText(`-${reduction.toFixed(1)}%`, mouthPos.x, mouthPos.y - 60, '#74b9ff');
 
         if (this.combo >= 3) {
-            const comboColors = ['#f1c40f', '#f39c12', '#e74c3c', '#ff006e'];
+            const comboColors = ['#74b9ff', '#a29bfe', '#dfe6e9', '#ff7675'];
             const colorIdx = Math.min(Math.floor(this.combo / 5), comboColors.length - 1);
             this.addFloatingText(`${this.combo}x COMBO!`, mouthPos.x, mouthPos.y - 90, comboColors[colorIdx]);
             this.audio.play('combo');
@@ -250,8 +254,8 @@ export class Game {
 
     levelUp(newLevel) {
         this.level = newLevel;
-        this.addFloatingText(`LEVEL ${newLevel}!`, GAME_CONFIG.WIDTH / 2, 120, '#00d2d3');
-        this.addParticles(GAME_CONFIG.WIDTH / 2, 100, '#00d2d3', 25);
+        this.addFloatingText(`LEVEL ${newLevel}!`, GAME_CONFIG.WIDTH / 2, 120, '#74b9ff');
+        this.addParticles(GAME_CONFIG.WIDTH / 2, 100, '#74b9ff', 25);
         this.audio.play('levelup');
 
         Object.entries(FOODS).forEach(([key, food]) => {
@@ -288,7 +292,7 @@ export class Game {
         if (closestVillager) {
             closestVillager.beingEaten = true;
             this.villagerCount--;
-            this.addFloatingText('-1', 60, GAME_CONFIG.HEIGHT - 100, '#e74c3c');
+            this.addFloatingText('-1', 60, GAME_CONFIG.HEIGHT - 100, '#ff7675');
             this.shake.trigger(8, 200);
             this.caiso.showGuilty();
 
@@ -307,7 +311,7 @@ export class Game {
         this.caiso.expression = state === 'victory' ? 'happy' : 'sad';
 
         if (state === 'victory') {
-            this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#ffd700', 60);
+            this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#74b9ff', 60);
             this.audio.play('levelup');
         } else {
             this.audio.play('gameover');
@@ -323,16 +327,7 @@ export class Game {
     }
 
     addParticles(x, y, color, count) {
-        for (let i = 0; i < count; i++) {
-            this.particles.push({
-                x, y,
-                vx: (Math.random() - 0.5) * 14,
-                vy: (Math.random() - 0.5) * 14 - 5,
-                color,
-                size: Math.random() * 10 + 4,
-                life: 35 + Math.random() * 20
-            });
-        }
+        this.particleSystem.burst(x, y, color, count);
     }
 
     update(deltaTime) {
@@ -349,7 +344,10 @@ export class Game {
         if (this.ui) this.ui.update();
 
         const bgSpeedMult = this.fever.active ? 2.5 : 1.0;
-        this.background.update(this.player.vx * bgSpeedMult, deltaTime);
+        this.parallax.update(this.player.vx * bgSpeedMult, deltaTime);
+
+        // Particle system (environmental + burst particles)
+        this.particleSystem.update(deltaTime);
 
         // Villager consume timer with difficulty scaling
         let baseInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
@@ -373,6 +371,13 @@ export class Game {
         this.player.update(deltaTime, this.joystick);
         this.fever.update(deltaTime);
 
+        // Slippery floor effect on player
+        if (this.environment.slipperyFloor) {
+            this.player.friction = 0.94; // More slippery (default is 0.88)
+        } else {
+            this.player.friction = 0.88;
+        }
+
         this.villagers.forEach(v => v.update(deltaTime, this.environment));
         this.villagers = this.villagers.filter(v => v.active);
 
@@ -380,14 +385,14 @@ export class Game {
         this.flyingFoods.forEach(food => {
             food.update(deltaTime, this.environment);
 
-            // Check hazard collisions - food is destroyed
+            // Check hazard collisions
             for (const hazard of this.hazards) {
                 const dx = food.x - hazard.x;
                 const dy = food.y - hazard.y;
                 if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
                     food.arrived = true;
                     food.blocked = true;
-                    this.addParticles(food.x, food.y, '#fff', 10);
+                    this.addParticles(food.x, food.y, '#636e72', 10);
                     break;
                 }
             }
@@ -407,15 +412,6 @@ export class Game {
         // Update hazards
         this.hazards.forEach(h => h.update(deltaTime, this.environment));
         this.hazards = this.hazards.filter(h => h.active);
-
-        // Update particles
-        this.particles = this.particles.filter(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.35;
-            p.life--;
-            return p.life > 0;
-        });
 
         // Update floating texts
         this.floatingTexts = this.floatingTexts.filter(t => {
@@ -451,53 +447,53 @@ export class Game {
         ctx.save();
         this.shake.apply(ctx);
 
+        // 1. Background color
         this.environment.drawBackground(ctx);
-        this.background.draw(ctx);
+
+        // 2. Parallax layers
+        this.parallax.draw(ctx);
+
+        // 3. Environmental particles (behind lighting)
+        this.particleSystem.draw(ctx);
+
+        // 4. Dynamic lighting overlay
         this.lighting.draw(ctx);
 
+        // 5. Fever effects
         if (this.fever.active) {
             this.fever.draw(ctx);
         }
 
-        // Danger zone indicator - use actual computed interval
+        // 6. Danger zone indicator
         const timerProgress = this.villagerTimer / this.consumeInterval;
-        ctx.fillStyle = `rgba(231, 76, 60, ${0.05 + timerProgress * 0.15})`;
+        ctx.fillStyle = `rgba(255, 118, 117, ${0.03 + timerProgress * 0.1})`;
         ctx.fillRect(0, GAME_CONFIG.CAISO_Y - 80, GAME_CONFIG.WIDTH, 200);
 
+        // 7. Entities
         this.villagers.forEach(v => v.draw(ctx, this.assets));
         this.caiso.draw(ctx, this.assets);
         this.player.draw(ctx, this.assets);
         this.flyingFoods.forEach(food => food.draw(ctx));
         this.hazards.forEach(h => h.draw(ctx));
 
-        // Fever gauge (always visible when not full)
+        // 8. Fever gauge
         this.fever.drawGauge(ctx);
 
-        // Score display
+        // 9. Score display
         ctx.font = 'bold 14px Fredoka One';
         ctx.textAlign = 'right';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillStyle = 'rgba(223, 230, 233, 0.7)';
         ctx.fillText(`SCORE: ${this.score}`, GAME_CONFIG.WIDTH - 15, GAME_CONFIG.HEIGHT - 155);
 
-        // Stage name indicator
+        // 10. Stage name (bottom left, subtle)
         if (this.stageManager.currentConfig) {
             ctx.font = '12px Nunito';
             ctx.textAlign = 'left';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fillStyle = 'rgba(178, 190, 195, 0.5)';
             ctx.fillText(this.stageManager.currentConfig.name, 15, GAME_CONFIG.HEIGHT - 155);
         }
 
-        // Draw particles
-        this.particles.forEach(p => {
-            ctx.globalAlpha = p.life / 55;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.globalAlpha = 1;
-
-        // Draw floating texts
+        // 11. Floating texts
         ctx.font = 'bold 22px Fredoka One';
         ctx.textAlign = 'center';
         this.floatingTexts.forEach(t => {
@@ -507,9 +503,10 @@ export class Game {
         });
         ctx.globalAlpha = 1;
 
+        // 12. Joystick
         this.joystick.draw(ctx);
 
-        // Stage transition overlay (on top of everything)
+        // 13. Stage transition overlay (topmost)
         this.stageManager.draw(ctx);
 
         ctx.restore();
@@ -518,171 +515,195 @@ export class Game {
     drawMenuScreen() {
         const ctx = this.ctx;
 
-        const titleBg = this.assets.get('title_background');
-        if (titleBg) {
-            ctx.drawImage(titleBg, 0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
-        } else {
-            const grad = ctx.createLinearGradient(0, 0, 0, GAME_CONFIG.HEIGHT);
-            grad.addColorStop(0, '#1a1a2e');
-            grad.addColorStop(0.5, '#16213e');
-            grad.addColorStop(1, '#0f3460');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+        // Dark atmospheric gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, GAME_CONFIG.HEIGHT);
+        grad.addColorStop(0, '#0f0f1b');
+        grad.addColorStop(0.4, '#1a1a2e');
+        grad.addColorStop(0.7, '#16213e');
+        grad.addColorStop(1, '#0f0f1b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
-            ctx.save();
-            ctx.translate(0, 100);
-            this.caiso.draw(ctx, this.assets);
-            ctx.restore();
+        // Atmospheric dust particles
+        const time = Date.now() * 0.001;
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 15; i++) {
+            const px = (Math.sin(time * 0.3 + i * 1.7) * 0.5 + 0.5) * GAME_CONFIG.WIDTH;
+            const py = (Math.cos(time * 0.2 + i * 2.1) * 0.5 + 0.5) * GAME_CONFIG.HEIGHT;
+            ctx.fillStyle = '#636e72';
+            ctx.beginPath();
+            ctx.arc(px, py, 2 + Math.sin(time + i) * 1, 0, Math.PI * 2);
+            ctx.fill();
         }
+        ctx.globalAlpha = 1;
 
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 48px Fredoka One';
+        // Caiso in menu
+        ctx.save();
+        ctx.translate(0, 100);
+        this.caiso.draw(ctx, this.assets);
+        ctx.restore();
+
+        // Title
+        ctx.fillStyle = '#dfe6e9';
+        ctx.font = 'bold 44px Fredoka One';
         ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(108, 52, 131, 0.8)';
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetX = 3;
-        ctx.shadowOffsetY = 3;
+        ctx.shadowColor = 'rgba(116, 185, 255, 0.5)';
+        ctx.shadowBlur = 20;
         ctx.fillText('FEEDING', GAME_CONFIG.WIDTH / 2, 120);
         ctx.fillText('CAISO', GAME_CONFIG.WIDTH / 2, 175);
         ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
 
-        ctx.font = 'bold 20px Fredoka One';
-        ctx.fillStyle = '#ffe066';
-        ctx.fillText('Save the Villagers!', GAME_CONFIG.WIDTH / 2, 215);
+        // Subtitle
+        ctx.font = 'bold 18px Fredoka One';
+        ctx.fillStyle = '#74b9ff';
+        ctx.fillText('The Hollow Deep', GAME_CONFIG.WIDTH / 2, 210);
 
+        // Info panel
         const panelY = 530;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillStyle = 'rgba(15, 15, 27, 0.85)';
         if (ctx.roundRect) {
             ctx.beginPath();
-            ctx.roundRect(30, panelY, GAME_CONFIG.WIDTH - 60, 160, 15);
+            ctx.roundRect(30, panelY, GAME_CONFIG.WIDTH - 60, 160, 12);
             ctx.fill();
         } else {
             ctx.fillRect(30, panelY, GAME_CONFIG.WIDTH - 60, 160);
         }
 
-        ctx.fillStyle = '#fff';
-        ctx.font = '15px Nunito';
-        ctx.fillText('Feed Caiso before it eats all villagers!', GAME_CONFIG.WIDTH / 2, panelY + 35);
-        ctx.fillText('Reduce hunger to 0% to WIN!', GAME_CONFIG.WIDTH / 2, panelY + 65);
-        ctx.fillText('Drag to move, tap FEED to throw food', GAME_CONFIG.WIDTH / 2, panelY + 95);
-        ctx.fillText('Build combos for FEVER MODE!', GAME_CONFIG.WIDTH / 2, panelY + 125);
+        // Panel border
+        ctx.strokeStyle = 'rgba(116, 185, 255, 0.3)';
+        ctx.lineWidth = 1;
+        if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(30, panelY, GAME_CONFIG.WIDTH - 60, 160, 12);
+            ctx.stroke();
+        }
 
-        ctx.font = 'bold 28px Fredoka One';
-        ctx.fillStyle = '#f1c40f';
-        const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+        ctx.fillStyle = '#b2bec3';
+        ctx.font = '14px Nunito';
+        ctx.fillText('Feed the Void before it consumes all.', GAME_CONFIG.WIDTH / 2, panelY + 35);
+        ctx.fillText('Reduce the Void gauge to 0% to purify.', GAME_CONFIG.WIDTH / 2, panelY + 60);
+        ctx.fillText('Drag to move, tap FEED to throw souls.', GAME_CONFIG.WIDTH / 2, panelY + 90);
+        ctx.fillText('Build combos for SOUL SURGE!', GAME_CONFIG.WIDTH / 2, panelY + 115);
+
+        // Start prompt
+        ctx.font = 'bold 24px Fredoka One';
+        ctx.fillStyle = '#74b9ff';
+        const pulse = Math.sin(Date.now() / 400) * 0.3 + 0.7;
         ctx.globalAlpha = pulse;
-        ctx.fillText('TAP TO START', GAME_CONFIG.WIDTH / 2, 760);
+        ctx.fillText('TAP TO ENTER', GAME_CONFIG.WIDTH / 2, 760);
         ctx.globalAlpha = 1;
     }
 
     drawGameOverScreen() {
         const ctx = this.ctx;
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillStyle = 'rgba(10, 5, 15, 0.9)';
         ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
         this.caiso.expression = 'sad';
         this.caiso.draw(ctx, this.assets);
 
-        ctx.fillStyle = '#e74c3c';
-        ctx.font = 'bold 48px Fredoka One';
+        ctx.fillStyle = '#ff7675';
+        ctx.font = 'bold 44px Fredoka One';
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', GAME_CONFIG.WIDTH / 2, 400);
+        ctx.shadowColor = 'rgba(255, 118, 117, 0.5)';
+        ctx.shadowBlur = 15;
+        ctx.fillText('SHADE FALLS', GAME_CONFIG.WIDTH / 2, 400);
+        ctx.shadowBlur = 0;
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        // Stats panel
+        ctx.fillStyle = 'rgba(15, 15, 27, 0.8)';
         if (ctx.roundRect) {
             ctx.beginPath();
-            ctx.roundRect(80, 450, GAME_CONFIG.WIDTH - 160, 140, 15);
+            ctx.roundRect(80, 440, GAME_CONFIG.WIDTH - 160, 160, 12);
             ctx.fill();
         } else {
-            ctx.fillRect(80, 450, GAME_CONFIG.WIDTH - 160, 140);
+            ctx.fillRect(80, 440, GAME_CONFIG.WIDTH - 160, 160);
         }
 
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px Nunito';
-        ctx.fillText(`Score: ${this.score}`, GAME_CONFIG.WIDTH / 2, 485);
-        ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 510);
-        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 535);
-        ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 560);
-        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 585);
+        ctx.fillStyle = '#dfe6e9';
+        ctx.font = '15px Nunito';
+        ctx.fillText(`Score: ${this.score}`, GAME_CONFIG.WIDTH / 2, 475);
+        ctx.fillText(`Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 500);
+        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 525);
+        ctx.fillText(`Form: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 550);
+        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 575);
 
         ctx.font = 'bold 20px Fredoka One';
-        ctx.fillStyle = '#f1c40f';
+        ctx.fillStyle = '#74b9ff';
         ctx.fillText('TAP TO RETRY', GAME_CONFIG.WIDTH / 2, 650);
     }
 
     drawVictoryScreen() {
         const ctx = this.ctx;
 
-        ctx.fillStyle = 'rgba(46, 204, 113, 0.25)';
+        // Dark background with soul blue tint
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
         ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
-        this.particles.forEach(p => {
-            ctx.globalAlpha = p.life / 55;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.globalAlpha = 1;
-
-        this.caiso.expression = 'happy';
-        this.caiso.draw(ctx, this.assets);
-
-        ctx.fillStyle = '#2ecc71';
-        ctx.font = 'bold 48px Fredoka One';
-        ctx.textAlign = 'center';
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.strokeText('YOU WIN!', GAME_CONFIG.WIDTH / 2, 400);
-        ctx.fillText('YOU WIN!', GAME_CONFIG.WIDTH / 2, 400);
-
-        ctx.fillStyle = '#f1c40f';
-        ctx.font = 'bold 18px Fredoka One';
-        ctx.fillText('Caiso is full! Villagers are safe!', GAME_CONFIG.WIDTH / 2, 440);
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        if (ctx.roundRect) {
-            ctx.beginPath();
-            ctx.roundRect(80, 470, GAME_CONFIG.WIDTH - 160, 160, 15);
-            ctx.fill();
-        } else {
-            ctx.fillRect(80, 470, GAME_CONFIG.WIDTH - 160, 160);
-        }
-
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px Nunito';
-        ctx.fillText(`Score: ${this.score}`, GAME_CONFIG.WIDTH / 2, 500);
-        ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 522);
-        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 544);
-        ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 566);
-        ctx.fillText(`Villagers Saved: ${this.villagerCount}`, GAME_CONFIG.WIDTH / 2, 588);
-        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 610);
-
-        ctx.font = 'bold 20px Fredoka One';
-        ctx.fillStyle = '#f1c40f';
-        ctx.fillText('TAP TO PLAY AGAIN', GAME_CONFIG.WIDTH / 2, 680);
-
+        // Victory particles
         if (Math.random() < 0.12) {
             this.addParticles(
                 Math.random() * GAME_CONFIG.WIDTH,
                 Math.random() * GAME_CONFIG.HEIGHT / 2,
-                ['#f1c40f', '#2ecc71', '#e74c3c', '#9b59b6', '#3498db'][Math.floor(Math.random() * 5)],
+                ['#74b9ff', '#a29bfe', '#dfe6e9', '#636e72'][Math.floor(Math.random() * 4)],
                 4
             );
         }
+
+        // Render burst particles
+        this.particleSystem.draw(ctx);
+
+        this.caiso.expression = 'happy';
+        this.caiso.draw(ctx, this.assets);
+
+        ctx.fillStyle = '#74b9ff';
+        ctx.font = 'bold 44px Fredoka One';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(116, 185, 255, 0.6)';
+        ctx.shadowBlur = 20;
+        ctx.strokeStyle = '#dfe6e9';
+        ctx.lineWidth = 2;
+        ctx.strokeText('PURIFIED', GAME_CONFIG.WIDTH / 2, 400);
+        ctx.fillText('PURIFIED', GAME_CONFIG.WIDTH / 2, 400);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#a29bfe';
+        ctx.font = 'bold 16px Fredoka One';
+        ctx.fillText('The Void is at peace.', GAME_CONFIG.WIDTH / 2, 435);
+
+        // Stats panel
+        ctx.fillStyle = 'rgba(15, 15, 27, 0.8)';
+        if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(80, 460, GAME_CONFIG.WIDTH - 160, 170, 12);
+            ctx.fill();
+        } else {
+            ctx.fillRect(80, 460, GAME_CONFIG.WIDTH - 160, 170);
+        }
+
+        ctx.fillStyle = '#dfe6e9';
+        ctx.font = '15px Nunito';
+        ctx.fillText(`Score: ${this.score}`, GAME_CONFIG.WIDTH / 2, 495);
+        ctx.fillText(`Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 518);
+        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 541);
+        ctx.fillText(`Form: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 564);
+        ctx.fillText(`Masks Saved: ${this.villagerCount}`, GAME_CONFIG.WIDTH / 2, 587);
+        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 610);
+
+        ctx.font = 'bold 20px Fredoka One';
+        ctx.fillStyle = '#74b9ff';
+        ctx.fillText('TAP TO PLAY AGAIN', GAME_CONFIG.WIDTH / 2, 680);
     }
 
     drawLoadingScreen() {
         const ctx = this.ctx;
-        ctx.fillStyle = '#1a1a2e';
+        ctx.fillStyle = '#0f0f1b';
         ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
         ctx.fillStyle = '#a29bfe';
         ctx.font = '28px Fredoka One';
         ctx.textAlign = 'center';
-        ctx.fillText('Loading...', GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2);
+        ctx.fillText('Entering the Hollow...', GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2);
     }
 
     start() {
