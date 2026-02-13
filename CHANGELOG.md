@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `games/feeding-caiso/docs/phase6/game_scenario.md`: 10-stage Hollow Knight-inspired scenario
+- `games/feeding-caiso/docs/phase6/technical_specification.md`: Technical plan for lighting, parallax, and particle systems
+- `games/feeding-caiso/docs/archived_phases.7z`: Archived old documentation (Phase 2-5)
+
+### Changed
+- `games/feeding-caiso/docs/phase6/design_document.md`: Updated theme to "The Hollow Deep" (Hollow Knight style)
+- `games/feeding-caiso/docs`: Archived old phase folders to reduce context size
+
+### Added
 - `agents/shared/` module: centralized constants, base LLM service, and pipeline runner
   - `constants.py`: Single source of truth for model versions (`GEMINI_TEXT_MODEL`, `IMAGEN_MODEL`)
   - `llm.py`: Shared `LLMService` base class (zero-dependency, urllib-based)
