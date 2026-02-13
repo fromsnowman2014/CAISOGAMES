@@ -1,47 +1,7 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "**/*.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/generate-image",
-      "dest": "/api/generate_image.py"
-    },
-    {
-      "src": "/api/generate_image",
-      "dest": "/api/generate_image.py"
-    },
-    {
-      "src": "/api/analyze-code",
-      "dest": "/api/analyze_code.py"
-    },
-    {
-      "src": "/api/analyze_code",
-      "dest": "/api/analyze_code.py"
-    },
-    {
-      "src": "/api/generate-sound",
-      "dest": "/api/generate_sound.py"
-    },
-    {
-      "src": "/api/generate_sound",
-      "dest": "/api/generate_sound.py"
-    },
-    {
-      "src": "/games/(.*)",
-      "dest": "/games/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+  "rewrites": [
+    { "source": "/api/generate-image", "destination": "/api/generate_image" },
+    { "source": "/api/analyze-code", "destination": "/api/analyze_code" },
+    { "source": "/api/generate-sound", "destination": "/api/generate_sound" }
   ]
 }
