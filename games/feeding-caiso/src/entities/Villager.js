@@ -1,5 +1,5 @@
-import { GAME_CONFIG } from '/src/utils/Constants.js';
-import { SquashStretch } from '/src/utils/SquashStretch.js';
+import { GAME_CONFIG } from '../utils/Constants.js';
+import { SquashStretch } from '../utils/SquashStretch.js';
 
 export class Villager {
     constructor(id, startY = GAME_CONFIG.VILLAGER_SPAWN_Y) {

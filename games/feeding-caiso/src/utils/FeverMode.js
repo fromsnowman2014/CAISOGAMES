@@ -1,4 +1,4 @@
-import { GAME_CONFIG, FEVER_CONFIG } from '/src/utils/Constants.js';
+import { GAME_CONFIG, FEVER_CONFIG } from './Constants.js';
 
 export class FeverMode {
     constructor() {

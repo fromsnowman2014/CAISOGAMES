@@ -1,19 +1,19 @@
-import { GAME_CONFIG, FOODS, EVOLUTION_TIERS, FEVER_CONFIG } from '/src/utils/Constants.js';
-import { AssetManager } from '/src/managers/AssetManager.js';
-import { AudioManager } from '/src/core/Audio.js';
-import { VirtualJoystick } from '/src/core/Input.js';
-import { ParallaxBackground } from '/src/utils/ParallaxBackground.js';
-import { FeverMode } from '/src/utils/FeverMode.js';
-import { ScreenShake, ImpactFrame } from '/src/utils/Juice.js';
-import { Caiso } from '/src/entities/Caiso.js';
-import { Player } from '/src/entities/Player.js';
-import { Villager } from '/src/entities/Villager.js';
-import { Food } from '/src/entities/Food.js';
-import { Hazard } from '/src/entities/Hazard.js';
-import { StageManager } from '/src/core/StageManager.js';
-import { Environment } from '/src/core/Environment.js';
-import { LightingSystem } from '/src/systems/LightingSystem.js';
-import { UIManager } from '/src/managers/UIManager.js';
+import { GAME_CONFIG, FOODS, EVOLUTION_TIERS, FEVER_CONFIG } from '../utils/Constants.js';
+import { AssetManager } from '../managers/AssetManager.js';
+import { AudioManager } from './Audio.js';
+import { VirtualJoystick } from './Input.js';
+import { ParallaxBackground } from '../utils/ParallaxBackground.js';
+import { FeverMode } from '../utils/FeverMode.js';
+import { ScreenShake, ImpactFrame } from '../utils/Juice.js';
+import { Caiso } from '../entities/Caiso.js';
+import { Player } from '../entities/Player.js';
+import { Villager } from '../entities/Villager.js';
+import { Food } from '../entities/Food.js';
+import { Hazard } from '../entities/Hazard.js';
+import { StageManager } from './StageManager.js';
+import { Environment } from './Environment.js';
+import { LightingSystem } from '../systems/LightingSystem.js';
+import { UIManager } from '../managers/UIManager.js';
 
 export class Game {
     constructor(canvas) {
@@ -29,6 +29,7 @@ export class Game {
         this.hunger = 100;
         this.villagerCount = 100;
         this.level = 1;
+        this.score = 0;
         this.combo = 0;
         this.maxCombo = 0;
         this.totalHungerReduced = 0;
@@ -38,6 +39,7 @@ export class Game {
         this.lastTime = 0;
         this.villagerTimer = 0;
         this.comboTimer = 0;
+        this.consumeInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
 
         this.villagers = [];
         this.flyingFoods = [];
@@ -62,15 +64,22 @@ export class Game {
     }
 
     async init() {
-        console.log("Feeding Caiso v5.0 - Refactored");
-        await this.assets.loadAll();
-        this.background = new ParallaxBackground(this.assets);
-        this.ui = new UIManager(this);
-        this.state = 'menu';
+        try {
+            console.log("Feeding Caiso v5.0 - Refactored");
+            await this.assets.loadAll();
+            this.background = new ParallaxBackground(this.assets);
+            this.ui = new UIManager(this);
+            this.state = 'menu';
 
-        this.stageManager.init();
-        this.setupEventListeners();
-        this.hideLoading();
+            this.stageManager.init();
+            this.setupEventListeners();
+            this.hideLoading();
+        } catch (err) {
+            console.error("Game init failed:", err);
+            this.state = 'menu';
+            this.setupEventListeners();
+            this.hideLoading();
+        }
     }
 
     hideLoading() {
@@ -125,6 +134,7 @@ export class Game {
         this.hunger = 100;
         this.villagerCount = 100;
         this.level = 1;
+        this.score = 0;
         this.combo = 0;
         this.maxCombo = 0;
         this.totalHungerReduced = 0;
@@ -132,12 +142,14 @@ export class Game {
         this.gameTime = 0;
         this.villagerTimer = 0;
         this.comboTimer = 0;
+        this.consumeInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
         this.flyingFoods = [];
         this.hazards = [];
         this.particles = [];
         this.floatingTexts = [];
         this.caiso.reset();
         this.fever = new FeverMode();
+        this.stageManager.init();
 
         this.villagers = [];
         for (let i = 0; i < 12; i++) {
@@ -191,7 +203,16 @@ export class Game {
         this.combo++;
         if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
+        // Score: base points + combo bonus + fever bonus
+        const basePoints = Math.round(reduction * 10);
+        this.score += basePoints;
+
+        const wasFeverActive = this.fever.active;
         this.fever.charge(FEVER_CONFIG.chargeRate + (this.combo > 3 ? FEVER_CONFIG.comboBonus : 0));
+        if (!wasFeverActive && this.fever.active) {
+            this.audio.play('fever');
+            this.addFloatingText('FEVER MODE!', GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 50, '#ff006e');
+        }
 
         const newLevel = Math.floor(this.totalHungerReduced / GAME_CONFIG.HUNGER_PER_LEVEL) + 1;
         if (newLevel > this.level) {
@@ -213,6 +234,7 @@ export class Game {
             const comboColors = ['#f1c40f', '#f39c12', '#e74c3c', '#ff006e'];
             const colorIdx = Math.min(Math.floor(this.combo / 5), comboColors.length - 1);
             this.addFloatingText(`${this.combo}x COMBO!`, mouthPos.x, mouthPos.y - 90, comboColors[colorIdx]);
+            this.audio.play('combo');
         }
 
         this.addParticles(mouthPos.x, mouthPos.y, foodData.color, 15);
@@ -332,10 +354,10 @@ export class Game {
         // Villager consume timer with difficulty scaling
         let baseInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
         baseInterval = Math.max(baseInterval * 0.5, baseInterval - (this.level * 150));
-        const consumeInterval = this.fever.active ? baseInterval * 1.5 : baseInterval;
+        this.consumeInterval = this.fever.active ? baseInterval * 1.5 : baseInterval;
 
         this.villagerTimer += deltaTime;
-        if (this.villagerTimer >= consumeInterval) {
+        if (this.villagerTimer >= this.consumeInterval) {
             this.villagerTimer = 0;
             this.consumeVillager();
         }
@@ -354,37 +376,33 @@ export class Game {
         this.villagers.forEach(v => v.update(deltaTime, this.environment));
         this.villagers = this.villagers.filter(v => v.active);
 
-        // Update flying foods (collect arrived/collided, then process)
-        const arrivedFoods = [];
+        // Update flying foods with hazard collision and Caiso consumption
         this.flyingFoods.forEach(food => {
             food.update(deltaTime, this.environment);
 
-            // Check hazard collisions
+            // Check hazard collisions - food is destroyed
             for (const hazard of this.hazards) {
                 const dx = food.x - hazard.x;
                 const dy = food.y - hazard.y;
                 if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
                     food.arrived = true;
+                    food.blocked = true;
                     this.addParticles(food.x, food.y, '#fff', 10);
                     break;
                 }
             }
 
-            if (food.arrived) {
-                arrivedFoods.push(food);
+            // Check if food reached Caiso's mouth
+            if (food.arrived && !food.blocked) {
+                const dx = food.x - this.caiso.x;
+                const dy = food.y - this.caiso.getMouthPosition().y;
+                if (Math.abs(dx) < 60 && Math.abs(dy) < 60) {
+                    this.consumeFood(food.foodData);
+                }
             }
         });
 
-        // Remove arrived foods and consume
         this.flyingFoods = this.flyingFoods.filter(f => !f.arrived);
-        arrivedFoods.forEach(food => {
-            // Only consume if it reached Caiso (not blocked by hazard)
-            const dx = food.x - this.caiso.x;
-            const dy = food.y - this.caiso.getMouthPosition().y;
-            if (Math.abs(dx) < 60 && Math.abs(dy) < 60) {
-                this.consumeFood(food.foodData);
-            }
-        });
 
         // Update hazards
         this.hazards.forEach(h => h.update(deltaTime, this.environment));
@@ -441,8 +459,8 @@ export class Game {
             this.fever.draw(ctx);
         }
 
-        // Danger zone indicator
-        const timerProgress = this.villagerTimer / GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
+        // Danger zone indicator - use actual computed interval
+        const timerProgress = this.villagerTimer / this.consumeInterval;
         ctx.fillStyle = `rgba(231, 76, 60, ${0.05 + timerProgress * 0.15})`;
         ctx.fillRect(0, GAME_CONFIG.CAISO_Y - 80, GAME_CONFIG.WIDTH, 200);
 
@@ -451,6 +469,23 @@ export class Game {
         this.player.draw(ctx, this.assets);
         this.flyingFoods.forEach(food => food.draw(ctx));
         this.hazards.forEach(h => h.draw(ctx));
+
+        // Fever gauge (always visible when not full)
+        this.fever.drawGauge(ctx);
+
+        // Score display
+        ctx.font = 'bold 14px Fredoka One';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillText(`SCORE: ${this.score}`, GAME_CONFIG.WIDTH - 15, GAME_CONFIG.HEIGHT - 155);
+
+        // Stage name indicator
+        if (this.stageManager.currentConfig) {
+            ctx.font = '12px Nunito';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fillText(this.stageManager.currentConfig.name, 15, GAME_CONFIG.HEIGHT - 155);
+        }
 
         // Draw particles
         this.particles.forEach(p => {
@@ -473,6 +508,9 @@ export class Game {
         ctx.globalAlpha = 1;
 
         this.joystick.draw(ctx);
+
+        // Stage transition overlay (on top of everything)
+        this.stageManager.draw(ctx);
 
         ctx.restore();
     }
@@ -564,10 +602,11 @@ export class Game {
 
         ctx.fillStyle = '#fff';
         ctx.font = '16px Nunito';
-        ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 485);
-        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 515);
-        ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 545);
-        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 575);
+        ctx.fillText(`Score: ${this.score}`, GAME_CONFIG.WIDTH / 2, 485);
+        ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 510);
+        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 535);
+        ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 560);
+        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 585);
 
         ctx.font = 'bold 20px Fredoka One';
         ctx.fillStyle = '#f1c40f';
@@ -615,11 +654,12 @@ export class Game {
 
         ctx.fillStyle = '#fff';
         ctx.font = '16px Nunito';
-        ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 505);
-        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 535);
-        ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 565);
-        ctx.fillText(`Villagers Saved: ${this.villagerCount}`, GAME_CONFIG.WIDTH / 2, 595);
-        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 620);
+        ctx.fillText(`Score: ${this.score}`, GAME_CONFIG.WIDTH / 2, 500);
+        ctx.fillText(`Final Level: ${this.level}`, GAME_CONFIG.WIDTH / 2, 522);
+        ctx.fillText(`Max Combo: ${this.maxCombo}x`, GAME_CONFIG.WIDTH / 2, 544);
+        ctx.fillText(`Evolution: ${EVOLUTION_TIERS[this.caiso.evolutionTier].name}`, GAME_CONFIG.WIDTH / 2, 566);
+        ctx.fillText(`Villagers Saved: ${this.villagerCount}`, GAME_CONFIG.WIDTH / 2, 588);
+        ctx.fillText(`Time: ${Math.floor(this.gameTime / 1000)}s`, GAME_CONFIG.WIDTH / 2, 610);
 
         ctx.font = 'bold 20px Fredoka One';
         ctx.fillStyle = '#f1c40f';

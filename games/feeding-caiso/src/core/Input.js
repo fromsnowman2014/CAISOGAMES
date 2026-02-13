@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from '/src/utils/Constants.js';
+import { GAME_CONFIG } from '../utils/Constants.js';
 
 export class VirtualJoystick {
     constructor(canvas) {

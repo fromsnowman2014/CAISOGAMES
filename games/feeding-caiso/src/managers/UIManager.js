@@ -1,4 +1,4 @@
-import { FOODS, GAME_CONFIG } from '/src/utils/Constants.js';
+import { FOODS, GAME_CONFIG } from '../utils/Constants.js';
 
 export class UIManager {
     constructor(game) {
@@ -101,13 +101,9 @@ export class UIManager {
             this.lastCombo = this.game.combo;
         }
 
-        // Danger Timer
-        const consumeInterval = this.game.fever.active ?
-            GAME_CONFIG.VILLAGER_CONSUME_INTERVAL * 1.5 :
-            GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
-
-        const progress = this.game.villagerTimer / consumeInterval;
-        this.dangerBar.style.width = `${progress * 100}%`;
+        // Danger Timer - use actual computed interval from Game
+        const progress = this.game.villagerTimer / this.game.consumeInterval;
+        this.dangerBar.style.width = `${Math.min(progress * 100, 100)}%`;
     }
 
     show() {

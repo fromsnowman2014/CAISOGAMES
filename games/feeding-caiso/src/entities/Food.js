@@ -13,6 +13,7 @@ export class Food {
         this.elapsed = 0;
         this.rotation = 0;
         this.arrived = false;
+        this.blocked = false;
         this.driftX = 0;
     }
 

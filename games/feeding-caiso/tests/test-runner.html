@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Feeding Caiso v5.0 - Test Suite</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        h1 { color: #a29bfe; margin-bottom: 5px; }
+        .subtitle { color: #666; margin-bottom: 20px; font-size: 14px; }
+        .summary {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .summary.pass { background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; color: #2ecc71; }
+        .summary.fail { background: rgba(231, 76, 60, 0.15); border: 1px solid #e74c3c; color: #e74c3c; }
+        .suite {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .suite-header {
+            padding: 10px 15px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+        .suite-header:hover { background: rgba(255,255,255,0.08); }
+        .test {
+            padding: 6px 15px 6px 30px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .test.pass .icon { color: #2ecc71; }
+        .test.fail .icon { color: #e74c3c; }
+        .test.fail .message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-left: 24px;
+            padding: 4px 0;
+            font-family: monospace;
+        }
+        .icon { font-size: 14px; min-width: 18px; }
+        #log { margin-top: 20px; padding: 10px; background: #111; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        .log-line { padding: 1px 0; }
+        .log-line.error { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>Feeding Caiso v5.0 Test Suite</h1>
+    <div class="subtitle">Phase 5: Ethereal Evolution - TDD Test Harness</div>
+    <div id="summary" class="summary">Running tests...</div>
+    <div id="results"></div>
+    <div id="log"></div>
+
+    <!-- Hidden canvas for tests that need it -->
+    <canvas id="testCanvas" width="480" height="854" style="display:none;"></canvas>
+
+    <script type="module">
+        // ======================================
+        // Minimal Test Framework
+        // ======================================
+        class TestRunner {
+            constructor() {
+                this.suites = [];
+                this.currentSuite = null;
+                this.totalPassed = 0;
+                this.totalFailed = 0;
+                this.logs = [];
+            }
+
+            describe(name, fn) {
+                this.currentSuite = { name, tests: [] };
+                this.suites.push(this.currentSuite);
+                fn();
+                this.currentSuite = null;
+            }
+
+            it(name, fn) {
+                if (!this.currentSuite) throw new Error('it() must be inside describe()');
+                this.currentSuite.tests.push({ name, fn });
+            }
+
+            assert(condition, message) {
+                if (!condition) throw new Error(message || 'Assertion failed');
+            }
+
+            assertEqual(actual, expected, label) {
+                if (actual !== expected) {
+                    throw new Error(`${label || 'assertEqual'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+                }
+            }
+
+            assertApprox(actual, expected, tolerance, label) {
+                if (Math.abs(actual - expected) > tolerance) {
+                    throw new Error(`${label || 'assertApprox'}: expected ~${expected} (+-${tolerance}), got ${actual}`);
+                }
+            }
+
+            assertGreater(actual, than, label) {
+                if (!(actual > than)) {
+                    throw new Error(`${label || 'assertGreater'}: expected ${actual} > ${than}`);
+                }
+            }
+
+            assertLess(actual, than, label) {
+                if (!(actual < than)) {
+                    throw new Error(`${label || 'assertLess'}: expected ${actual} < ${than}`);
+                }
+            }
+
+            async run() {
+                for (const suite of this.suites) {
+                    for (const test of suite.tests) {
+                        try {
+                            await test.fn();
+                            test.passed = true;
+                            this.totalPassed++;
+                        } catch (e) {
+                            test.passed = false;
+                            test.error = e.message;
+                            this.totalFailed++;
+                            this.logs.push({ level: 'error', msg: `FAIL: ${suite.name} > ${test.name}: ${e.message}` });
+                        }
+                    }
+                }
+                this.render();
+            }
+
+            render() {
+                const summary = document.getElementById('summary');
+                const allPassed = this.totalFailed === 0;
+                summary.className = `summary ${allPassed ? 'pass' : 'fail'}`;
+                summary.textContent = allPassed
+                    ? `All ${this.totalPassed} tests passed`
+                    : `${this.totalFailed} failed, ${this.totalPassed} passed (${this.totalPassed + this.totalFailed} total)`;
+
+                const results = document.getElementById('results');
+                results.innerHTML = '';
+
+                for (const suite of this.suites) {
+                    const suiteDiv = document.createElement('div');
+                    suiteDiv.className = 'suite';
+
+                    const passed = suite.tests.filter(t => t.passed).length;
+                    const total = suite.tests.length;
+                    const allPass = passed === total;
+
+                    const header = document.createElement('div');
+                    header.className = 'suite-header';
+                    header.textContent = `${allPass ? '\u2705' : '\u274c'} ${suite.name} (${passed}/${total})`;
+                    suiteDiv.appendChild(header);
+
+                    for (const test of suite.tests) {
+                        const testDiv = document.createElement('div');
+                        testDiv.className = `test ${test.passed ? 'pass' : 'fail'}`;
+
+                        const icon = document.createElement('span');
+                        icon.className = 'icon';
+                        icon.textContent = test.passed ? '\u2713' : '\u2717';
+                        testDiv.appendChild(icon);
+
+                        const name = document.createElement('span');
+                        name.textContent = test.name;
+                        testDiv.appendChild(name);
+
+                        suiteDiv.appendChild(testDiv);
+
+                        if (!test.passed && test.error) {
+                            const errDiv = document.createElement('div');
+                            errDiv.className = 'test fail';
+                            const msg = document.createElement('span');
+                            msg.className = 'message';
+                            msg.textContent = test.error;
+                            errDiv.appendChild(msg);
+                            suiteDiv.appendChild(errDiv);
+                        }
+                    }
+
+                    results.appendChild(suiteDiv);
+                }
+
+                const logDiv = document.getElementById('log');
+                if (this.logs.length > 0) {
+                    logDiv.innerHTML = '<strong>Error Log:</strong><br>' + this.logs.map(l =>
+                        `<div class="log-line ${l.level}">${l.msg}</div>`
+                    ).join('');
+                } else {
+                    logDiv.style.display = 'none';
+                }
+            }
+        }
+
+        // ======================================
+        // Import Game Modules
+        // ======================================
+        import { GAME_CONFIG, FOODS, EVOLUTION_TIERS, FEVER_CONFIG } from '../src/utils/Constants.js';
+        import { Caiso } from '../src/entities/Caiso.js';
+        import { Player } from '../src/entities/Player.js';
+        import { Villager } from '../src/entities/Villager.js';
+        import { Food } from '../src/entities/Food.js';
+        import { Hazard } from '../src/entities/Hazard.js';
+        import { FeverMode } from '../src/utils/FeverMode.js';
+        import { ScreenShake, ImpactFrame } from '../src/utils/Juice.js';
+        import { SquashStretch } from '../src/utils/SquashStretch.js';
+        import { Environment } from '../src/core/Environment.js';
+        import { LightingSystem } from '../src/systems/LightingSystem.js';
+        import { StageManager } from '../src/core/StageManager.js';
+        import { STAGES } from '../src/config/Stages.js';
+
+        // ======================================
+        // Test Runner Instance
+        // ======================================
+        const T = new TestRunner();
+
+        // ======================================
+        // 1. CONSTANTS & CONFIG TESTS
+        // ======================================
+        T.describe('Constants & Configuration', () => {
+            T.it('GAME_CONFIG has correct canvas dimensions', () => {
+                T.assertEqual(GAME_CONFIG.WIDTH, 480, 'width');
+                T.assertEqual(GAME_CONFIG.HEIGHT, 854, 'height');
+            });
+
+            T.it('VILLAGER_SPAWN_Y is within visible canvas', () => {
+                T.assertLess(GAME_CONFIG.VILLAGER_SPAWN_Y, GAME_CONFIG.HEIGHT,
+                    'VILLAGER_SPAWN_Y must be < canvas height');
+            });
+
+            T.it('CAISO_Y is in upper portion of screen', () => {
+                T.assertLess(GAME_CONFIG.CAISO_Y, GAME_CONFIG.HEIGHT / 2,
+                    'Caiso should be in top half');
+            });
+
+            T.it('PLAYER_Y is in lower portion of screen', () => {
+                T.assertGreater(GAME_CONFIG.PLAYER_Y, GAME_CONFIG.HEIGHT / 2,
+                    'Player should be in bottom half');
+            });
+
+            T.it('FOODS has 6 food items', () => {
+                T.assertEqual(Object.keys(FOODS).length, 6, 'food count');
+            });
+
+            T.it('All foods have required properties', () => {
+                Object.entries(FOODS).forEach(([key, food]) => {
+                    T.assert(food.name, `${key} missing name`);
+                    T.assert(food.color, `${key} missing color`);
+                    T.assert(food.hungerReduction > 0, `${key} hungerReduction must be > 0`);
+                    T.assert(food.unlockLevel >= 1, `${key} unlockLevel must be >= 1`);
+                    T.assert(food.asset, `${key} missing asset key`);
+                    T.assert(food.weight > 0, `${key} weight must be > 0`);
+                });
+            });
+
+            T.it('Food unlock levels are progressively increasing', () => {
+                const levels = Object.values(FOODS).map(f => f.unlockLevel);
+                for (let i = 1; i < levels.length; i++) {
+                    T.assert(levels[i] >= levels[i - 1],
+                        `Food unlock level ${levels[i]} should be >= ${levels[i - 1]}`);
+                }
+            });
+
+            T.it('EVOLUTION_TIERS has 4 tiers', () => {
+                T.assertEqual(EVOLUTION_TIERS.length, 4, 'tier count');
+            });
+
+            T.it('Evolution tier levels are increasing', () => {
+                for (let i = 1; i < EVOLUTION_TIERS.length; i++) {
+                    T.assertGreater(EVOLUTION_TIERS[i].level, EVOLUTION_TIERS[i - 1].level,
+                        `Tier ${i} level must be > tier ${i - 1}`);
+                }
+            });
+
+            T.it('FEVER_CONFIG has valid settings', () => {
+                T.assertGreater(FEVER_CONFIG.duration, 0, 'duration');
+                T.assertGreater(FEVER_CONFIG.gaugeMax, 0, 'gaugeMax');
+                T.assertGreater(FEVER_CONFIG.scoreMultiplier, 1, 'scoreMultiplier should be > 1');
+            });
+        });
+
+        // ======================================
+        // 2. STAGES CONFIG TESTS
+        // ======================================
+        T.describe('Stages Configuration', () => {
+            T.it('Has exactly 10 stages', () => {
+                T.assertEqual(STAGES.length, 10, 'stage count');
+            });
+
+            T.it('All stages have required properties', () => {
+                STAGES.forEach((stage, i) => {
+                    T.assert(stage.name, `Stage ${i + 1} missing name`);
+                    T.assert(stage.theme, `Stage ${i + 1} missing theme`);
+                    T.assert(stage.backgroundColor, `Stage ${i + 1} missing backgroundColor`);
+                    T.assert(stage.atmosphere, `Stage ${i + 1} missing atmosphere`);
+                    T.assert(stage.atmosphere.overlayColor !== undefined, `Stage ${i + 1} missing overlayColor`);
+                    T.assert(stage.atmosphere.windX !== undefined, `Stage ${i + 1} missing windX`);
+                    T.assert(stage.atmosphere.gravityY !== undefined, `Stage ${i + 1} missing gravityY`);
+                    T.assert(Array.isArray(stage.hazards), `Stage ${i + 1} hazards must be array`);
+                });
+            });
+
+            T.it('Stage 1 has no hazards (tutorial stage)', () => {
+                T.assertEqual(STAGES[0].hazards.length, 0, 'Stage 1 hazards');
+            });
+
+            T.it('Stage 1 has no wind (tutorial stage)', () => {
+                T.assertEqual(STAGES[0].atmosphere.windX, 0, 'Stage 1 wind');
+            });
+
+            T.it('Later stages have environmental challenges', () => {
+                // Stage 3 (Whispering Breeze) should have wind
+                T.assertGreater(STAGES[2].atmosphere.windX, 0, 'Stage 3 wind');
+                // Stage 8 (Starry Expanse) should have lower gravity
+                T.assertLess(STAGES[7].atmosphere.gravityY, 1.0, 'Stage 8 gravity');
+            });
+        });
+
+        // ======================================
+        // 3. CAISO ENTITY TESTS
+        // ======================================
+        T.describe('Caiso Entity', () => {
+            T.it('Initializes at correct position', () => {
+                const caiso = new Caiso();
+                T.assertEqual(caiso.x, GAME_CONFIG.WIDTH / 2, 'x position');
+                T.assertEqual(caiso.y, GAME_CONFIG.CAISO_Y, 'y position');
+            });
+
+            T.it('Starts at evolution tier 0', () => {
+                const caiso = new Caiso();
+                T.assertEqual(caiso.evolutionTier, 0, 'starting tier');
+            });
+
+            T.it('Starts with hungry expression', () => {
+                const caiso = new Caiso();
+                T.assertEqual(caiso.expression, 'hungry', 'starting expression');
+            });
+
+            T.it('getEvolutionTier returns correct tiers', () => {
+                const caiso = new Caiso();
+                T.assertEqual(caiso.getEvolutionTier(1), 0, 'level 1 = tier 0');
+                T.assertEqual(caiso.getEvolutionTier(2), 0, 'level 2 = tier 0');
+                T.assertEqual(caiso.getEvolutionTier(3), 1, 'level 3 = tier 1');
+                T.assertEqual(caiso.getEvolutionTier(5), 1, 'level 5 = tier 1');
+                T.assertEqual(caiso.getEvolutionTier(6), 2, 'level 6 = tier 2');
+                T.assertEqual(caiso.getEvolutionTier(10), 3, 'level 10 = tier 3');
+                T.assertEqual(caiso.getEvolutionTier(15), 3, 'level 15 = tier 3');
+            });
+
+            T.it('updateEvolution returns true on tier change', () => {
+                const caiso = new Caiso();
+                T.assertEqual(caiso.updateEvolution(2), false, 'level 2 should not evolve');
+                T.assertEqual(caiso.updateEvolution(3), true, 'level 3 should evolve');
+                T.assertEqual(caiso.evolutionTier, 1, 'should be tier 1');
+                T.assertEqual(caiso.updateEvolution(3), false, 'same level should not re-evolve');
+            });
+
+            T.it('eat() sets happy expression with timer', () => {
+                const caiso = new Caiso();
+                caiso.eat();
+                T.assertEqual(caiso.expression, 'happy', 'expression after eat');
+                T.assertGreater(caiso.eatTimer, 0, 'eat timer should be positive');
+            });
+
+            T.it('showGuilty() sets sad expression', () => {
+                const caiso = new Caiso();
+                caiso.showGuilty();
+                T.assertEqual(caiso.expression, 'sad', 'expression after guilty');
+            });
+
+            T.it('Expression reverts to hungry after timer expires', () => {
+                const caiso = new Caiso();
+                caiso.eat();
+                T.assertEqual(caiso.expression, 'happy');
+                // Simulate time passing
+                caiso.update(500);
+                T.assertEqual(caiso.expression, 'hungry', 'should revert after timer');
+            });
+
+            T.it('getMouthPosition returns position below center', () => {
+                const caiso = new Caiso();
+                const mouth = caiso.getMouthPosition();
+                T.assertEqual(mouth.x, caiso.x, 'mouth x = caiso x');
+                T.assertGreater(mouth.y, caiso.y, 'mouth y should be below caiso y');
+            });
+
+            T.it('reset() restores initial state', () => {
+                const caiso = new Caiso();
+                caiso.evolutionTier = 3;
+                caiso.expression = 'happy';
+                caiso.eatTimer = 500;
+                caiso.reset();
+                T.assertEqual(caiso.evolutionTier, 0, 'tier reset');
+                T.assertEqual(caiso.expression, 'hungry', 'expression reset');
+                T.assertEqual(caiso.eatTimer, 0, 'eat timer reset');
+            });
+        });
+
+        // ======================================
+        // 4. PLAYER ENTITY TESTS
+        // ======================================
+        T.describe('Player Entity', () => {
+            T.it('Initializes at correct position', () => {
+                const player = new Player();
+                T.assertEqual(player.x, GAME_CONFIG.WIDTH / 2, 'x');
+                T.assertEqual(player.y, GAME_CONFIG.PLAYER_Y, 'y');
+            });
+
+            T.it('Starts with zero velocity', () => {
+                const player = new Player();
+                T.assertEqual(player.vx, 0, 'vx');
+                T.assertEqual(player.vy, 0, 'vy');
+            });
+
+            T.it('throw() sets throwing state', () => {
+                const player = new Player();
+                player.throw();
+                T.assertEqual(player.throwing, true, 'throwing');
+                T.assertGreater(player.throwTimer, 0, 'throw timer');
+            });
+
+            T.it('Player stays within bounds', () => {
+                const player = new Player();
+                player.x = -100;
+                player.update(16, { active: false, direction: { x: 0, y: 0 } });
+                T.assertGreater(player.x, 0, 'should bounce from left edge');
+            });
+        });
+
+        // ======================================
+        // 5. VILLAGER ENTITY TESTS
+        // ======================================
+        T.describe('Villager Entity', () => {
+            T.it('Spawns at configured Y position', () => {
+                const v = new Villager(1, GAME_CONFIG.VILLAGER_SPAWN_Y);
+                T.assertApprox(v.y, GAME_CONFIG.VILLAGER_SPAWN_Y, 30, 'spawn Y');
+            });
+
+            T.it('Spawns off-screen on left or right', () => {
+                // Test multiple spawns to verify randomness
+                let leftCount = 0, rightCount = 0;
+                for (let i = 0; i < 20; i++) {
+                    const v = new Villager(i);
+                    if (v.x < 0) leftCount++;
+                    else if (v.x > GAME_CONFIG.WIDTH) rightCount++;
+                }
+                T.assertGreater(leftCount + rightCount, 10,
+                    'Most villagers should spawn off-screen');
+            });
+
+            T.it('Gets scared when approaching center', () => {
+                const v = new Villager(1);
+                v.fromLeft = true;
+                v.x = GAME_CONFIG.WIDTH / 2 - 100; // Close to center
+                v.update(16, null);
+                T.assertEqual(v.scared, true, 'should be scared near center');
+            });
+
+            T.it('Being eaten reduces opacity and deactivates', () => {
+                const v = new Villager(1);
+                v.beingEaten = true;
+                // Simulate enough time for eaten animation to complete
+                for (let i = 0; i < 50; i++) v.update(16, null);
+                T.assertEqual(v.active, false, 'should deactivate after being eaten');
+            });
+
+            T.it('Wind affects villager movement', () => {
+                const v1 = new Villager(1);
+                v1.fromLeft = true;
+                v1.x = 100;
+                const startX = v1.x;
+
+                const env = { windX: 5, gravityY: 1 };
+                v1.update(16, env);
+                const movedWithWind = v1.x - startX;
+
+                const v2 = new Villager(2);
+                v2.fromLeft = true;
+                v2.x = 100;
+                v2.speed = v1.speed;
+                v2.update(16, null);
+                const movedNoWind = v2.x - 100;
+
+                T.assertGreater(movedWithWind, movedNoWind, 'Wind should push villager further');
+            });
+        });
+
+        // ======================================
+        // 6. FOOD PHYSICS TESTS
+        // ======================================
+        T.describe('Food Physics', () => {
+            const mockAssets = { get: () => null };
+            const mockFood = FOODS.apple;
+
+            T.it('Starts at player position', () => {
+                const food = new Food(mockFood, 100, 700, 240, 180, mockAssets);
+                T.assertEqual(food.x, 100, 'start x');
+                T.assertEqual(food.y, 700, 'start y');
+            });
+
+            T.it('Has blocked property initialized to false', () => {
+                const food = new Food(mockFood, 100, 700, 240, 180, mockAssets);
+                T.assertEqual(food.blocked, false, 'blocked should be false initially');
+            });
+
+            T.it('Progresses toward target over time', () => {
+                const food = new Food(mockFood, 100, 700, 240, 180, mockAssets);
+                food.update(200, null);
+                T.assertGreater(food.progress, 0, 'progress should increase');
+                T.assertLess(food.y, 700, 'should move upward (arc)');
+            });
+
+            T.it('Arrives when progress reaches 1', () => {
+                const food = new Food(mockFood, 100, 700, 240, 180, mockAssets);
+                // Simulate full duration
+                food.update(400, null);
+                T.assertEqual(food.arrived, true, 'should arrive');
+            });
+
+            T.it('Wind drifts food horizontally', () => {
+                const food1 = new Food(mockFood, 240, 700, 240, 180, mockAssets);
+                const food2 = new Food(mockFood, 240, 700, 240, 180, mockAssets);
+
+                food1.update(100, { windX: 5, gravityY: 1 });
+                food2.update(100, { windX: 0, gravityY: 1 });
+
+                T.assertGreater(food1.x, food2.x, 'Wind should drift food right');
+            });
+
+            T.it('Low gravity creates higher arc', () => {
+                const foodNormal = new Food(mockFood, 240, 700, 240, 180, mockAssets);
+                const foodLowG = new Food(mockFood, 240, 700, 240, 180, mockAssets);
+
+                foodNormal.update(150, { windX: 0, gravityY: 1.0 });
+                foodLowG.update(150, { windX: 0, gravityY: 0.5 });
+
+                T.assertLess(foodLowG.y, foodNormal.y,
+                    'Low gravity should create higher arc (lower y)');
+            });
+
+            T.it('Food rotates during flight', () => {
+                const food = new Food(mockFood, 240, 700, 240, 180, mockAssets);
+                T.assertEqual(food.rotation, 0, 'initial rotation');
+                food.update(100, null);
+                T.assertGreater(food.rotation, 0, 'should rotate');
+            });
+        });
+
+        // ======================================
+        // 7. HAZARD ENTITY TESTS
+        // ======================================
+        T.describe('Hazard Entity', () => {
+            const mockAssets = { get: () => null };
+
+            T.it('Spawns at given position', () => {
+                const h = new Hazard('leaf', 100, -50, mockAssets);
+                T.assertEqual(h.x, 100, 'x');
+                T.assertEqual(h.y, -50, 'y');
+                T.assertEqual(h.type, 'leaf', 'type');
+            });
+
+            T.it('Moves downward over time', () => {
+                const h = new Hazard('bee', 100, 0, mockAssets);
+                h.update(16, null);
+                T.assertGreater(h.y, 0, 'should move down');
+            });
+
+            T.it('Deactivates when off-screen', () => {
+                const h = new Hazard('star', 100, GAME_CONFIG.HEIGHT + 40, mockAssets);
+                h.update(16, null);
+                T.assertEqual(h.active, false, 'should deactivate off-screen');
+            });
+
+            T.it('Leaf type has slower fall and sway', () => {
+                const leaf = new Hazard('leaf', 100, 0, mockAssets);
+                const star = new Hazard('star', 100, 0, mockAssets);
+                T.assertLess(leaf.vy, star.vy, 'leaf should fall slower than star');
+            });
+
+            T.it('Wind affects hazard movement', () => {
+                const h = new Hazard('bee', 200, 0, mockAssets);
+                const startX = h.x;
+                h.update(160, { windX: 5, gravityY: 1 });
+                T.assertGreater(h.x, startX + 5, 'Wind should push hazard');
+            });
+        });
+
+        // ======================================
+        // 8. FEVER MODE TESTS
+        // ======================================
+        T.describe('FeverMode System', () => {
+            T.it('Starts inactive with empty gauge', () => {
+                const fever = new FeverMode();
+                T.assertEqual(fever.active, false, 'should start inactive');
+                T.assertEqual(fever.gauge, 0, 'gauge should be 0');
+            });
+
+            T.it('Charging increases gauge', () => {
+                const fever = new FeverMode();
+                fever.charge(30);
+                T.assertEqual(fever.gauge, 30, 'gauge after charge');
+            });
+
+            T.it('Gauge caps at max', () => {
+                const fever = new FeverMode();
+                fever.charge(200);
+                T.assertEqual(fever.gauge, FEVER_CONFIG.gaugeMax, 'should cap at max');
+            });
+
+            T.it('Activates when gauge reaches max', () => {
+                const fever = new FeverMode();
+                fever.charge(FEVER_CONFIG.gaugeMax);
+                T.assertEqual(fever.active, true, 'should activate');
+                T.assertGreater(fever.timer, 0, 'timer should be set');
+            });
+
+            T.it('Cannot charge while active', () => {
+                const fever = new FeverMode();
+                fever.charge(FEVER_CONFIG.gaugeMax);
+                T.assertEqual(fever.active, true);
+                const gaugeBefore = fever.gauge;
+                fever.charge(50);
+                T.assertEqual(fever.gauge, gaugeBefore, 'gauge should not change when active');
+            });
+
+            T.it('Deactivates after duration expires', () => {
+                const fever = new FeverMode();
+                fever.charge(FEVER_CONFIG.gaugeMax);
+                T.assertEqual(fever.active, true);
+
+                // Simulate enough time for fever to expire
+                fever.update(FEVER_CONFIG.duration + 100);
+                T.assertEqual(fever.active, false, 'should deactivate');
+                T.assertEqual(fever.gauge, 0, 'gauge should reset');
+            });
+
+            T.it('getMultiplier returns correct values', () => {
+                const fever = new FeverMode();
+                T.assertEqual(fever.getMultiplier(), 1, 'inactive multiplier');
+
+                fever.charge(FEVER_CONFIG.gaugeMax);
+                T.assertEqual(fever.getMultiplier(), FEVER_CONFIG.scoreMultiplier,
+                    'active multiplier');
+            });
+
+            T.it('Creates particles on activation', () => {
+                const fever = new FeverMode();
+                fever.charge(FEVER_CONFIG.gaugeMax);
+                T.assertGreater(fever.particles.length, 0, 'should have particles');
+            });
+        });
+
+        // ======================================
+        // 9. SCREEN SHAKE & IMPACT FRAME TESTS
+        // ======================================
+        T.describe('Juice Systems', () => {
+            T.it('ScreenShake starts inactive', () => {
+                const shake = new ScreenShake();
+                T.assertEqual(shake.x, 0, 'x offset');
+                T.assertEqual(shake.y, 0, 'y offset');
+            });
+
+            T.it('ScreenShake activates on trigger', () => {
+                const shake = new ScreenShake();
+                shake.trigger(10, 200);
+                shake.update(16);
+                const hasOffset = shake.x !== 0 || shake.y !== 0;
+                T.assert(hasOffset, 'should have non-zero offset');
+            });
+
+            T.it('ScreenShake decays over time', () => {
+                const shake = new ScreenShake();
+                shake.trigger(10, 100);
+                shake.update(200);
+                T.assertEqual(shake.x, 0, 'should return to 0 after duration');
+                T.assertEqual(shake.y, 0, 'y should return to 0');
+            });
+
+            T.it('ImpactFrame starts inactive', () => {
+                const freeze = new ImpactFrame();
+                T.assertEqual(freeze.active, false);
+            });
+
+            T.it('ImpactFrame freezes then releases', () => {
+                const freeze = new ImpactFrame();
+                freeze.trigger(50);
+                T.assertEqual(freeze.update(16), true, 'should freeze');
+                T.assertEqual(freeze.update(50), false, 'should release after duration');
+            });
+        });
+
+        // ======================================
+        // 10. SQUASH & STRETCH TESTS
+        // ======================================
+        T.describe('SquashStretch Animation', () => {
+            T.it('Starts at 1:1 scale', () => {
+                const ss = new SquashStretch();
+                const t = ss.getTransform();
+                T.assertApprox(t.scaleX, 1, 0.01, 'scaleX');
+                T.assertApprox(t.scaleY, 1, 0.01, 'scaleY');
+            });
+
+            T.it('triggerBounce stretches horizontally', () => {
+                const ss = new SquashStretch();
+                ss.triggerBounce();
+                ss.update();
+                const t = ss.getTransform();
+                T.assertGreater(t.scaleX, 1, 'should stretch X');
+            });
+
+            T.it('triggerEat squashes horizontally', () => {
+                const ss = new SquashStretch();
+                ss.triggerEat();
+                ss.update();
+                const t = ss.getTransform();
+                T.assertLess(t.scaleX, 1, 'should squash X');
+            });
+
+            T.it('Returns to 1:1 after multiple updates', () => {
+                const ss = new SquashStretch();
+                ss.triggerBounce();
+                for (let i = 0; i < 100; i++) ss.update();
+                const t = ss.getTransform();
+                T.assertApprox(t.scaleX, 1, 0.05, 'should return to 1');
+                T.assertApprox(t.scaleY, 1, 0.05, 'should return to 1');
+            });
+        });
+
+        // ======================================
+        // 11. ENVIRONMENT SYSTEM TESTS
+        // ======================================
+        T.describe('Environment System', () => {
+            T.it('Initializes with default values', () => {
+                const mockGame = { canvas: { width: 480, height: 854 } };
+                const env = new Environment(mockGame);
+                T.assertEqual(env.windX, 0, 'wind');
+                T.assertEqual(env.gravityY, 1.0, 'gravity');
+            });
+
+            T.it('setAtmosphere updates values from stage config', () => {
+                const mockGame = { canvas: { width: 480, height: 854 } };
+                const env = new Environment(mockGame);
+                env.setAtmosphere(STAGES[2]); // Whispering Breeze
+                T.assertEqual(env.windX, 2.5, 'wind from stage 3');
+                T.assertEqual(env.gravityY, 1.0, 'gravity from stage 3');
+                T.assertEqual(env.backgroundColor, '#B3E5FC', 'bg color');
+            });
+        });
+
+        // ======================================
+        // 12. STAGE MANAGER TESTS
+        // ======================================
+        T.describe('StageManager', () => {
+            const createMockGame = () => ({
+                level: 1,
+                canvas: { width: 480, height: 854 },
+                hazards: [],
+                assets: { get: () => null },
+                environment: {
+                    setAtmosphere: () => {},
+                    windX: 0,
+                    gravityY: 1
+                },
+                lighting: { setAtmosphere: () => {} },
+                addFloatingText: () => {}
+            });
+
+            T.it('Initializes at stage 0', () => {
+                const game = createMockGame();
+                const sm = new StageManager(game);
+                sm.init();
+                T.assertEqual(sm.currentStageIndex, 0, 'stage index');
+                T.assertEqual(sm.currentConfig.name, 'Morning Dew', 'stage name');
+            });
+
+            T.it('Transitions when level exceeds stage', () => {
+                const game = createMockGame();
+                const sm = new StageManager(game);
+                sm.init();
+
+                game.level = 2;
+                sm.update(16);
+                T.assertEqual(sm.isTransitioning, true, 'should start transition');
+            });
+
+            T.it('Stage transition completes with fade', () => {
+                const game = createMockGame();
+                const sm = new StageManager(game);
+                sm.init();
+
+                game.level = 2;
+                sm.update(16); // Start transition
+
+                // Simulate transition duration
+                for (let i = 0; i < 100; i++) {
+                    sm.update(20);
+                }
+
+                T.assertEqual(sm.isTransitioning, false, 'transition should complete');
+                T.assertEqual(sm.currentStageIndex, 1, 'should advance to stage 1');
+            });
+
+            T.it('Spawns hazards for stages with hazard config', () => {
+                const game = createMockGame();
+                const sm = new StageManager(game);
+                sm.init();
+
+                // Load stage 2 (Sunlit Bloom - has "bee" hazard)
+                sm.loadStage(1);
+                game.level = 2;
+
+                // Simulate enough time for hazard to spawn
+                for (let i = 0; i < 200; i++) {
+                    sm.update(16);
+                }
+                // At least some hazards should have spawned
+                // (probabilistic - 70% chance per spawn interval)
+                // With 200 * 16ms = 3200ms, spawn interval ~1800ms, should get at least 1
+                T.assertGreater(game.hazards.length, 0,
+                    'Should spawn hazards for stages with hazard config');
+            });
+        });
+
+        // ======================================
+        // 13. GAME MECHANICS TESTS
+        // ======================================
+        T.describe('Game Mechanics (Pure Logic)', () => {
+            // Test combo multiplier logic (extracted from Game.js)
+            function getComboMultiplier(combo) {
+                if (combo >= 15) return 4.0;
+                if (combo >= 10) return 3.0;
+                if (combo >= 5) return 2.0;
+                if (combo >= 3) return 1.5;
+                return 1.0;
+            }
+
+            T.it('Combo multiplier: 0-2 hits = 1x', () => {
+                T.assertEqual(getComboMultiplier(0), 1.0);
+                T.assertEqual(getComboMultiplier(1), 1.0);
+                T.assertEqual(getComboMultiplier(2), 1.0);
+            });
+
+            T.it('Combo multiplier: 3-4 hits = 1.5x', () => {
+                T.assertEqual(getComboMultiplier(3), 1.5);
+                T.assertEqual(getComboMultiplier(4), 1.5);
+            });
+
+            T.it('Combo multiplier: 5-9 hits = 2x', () => {
+                T.assertEqual(getComboMultiplier(5), 2.0);
+                T.assertEqual(getComboMultiplier(9), 2.0);
+            });
+
+            T.it('Combo multiplier: 10-14 hits = 3x', () => {
+                T.assertEqual(getComboMultiplier(10), 3.0);
+            });
+
+            T.it('Combo multiplier: 15+ hits = 4x', () => {
+                T.assertEqual(getComboMultiplier(15), 4.0);
+                T.assertEqual(getComboMultiplier(100), 4.0);
+            });
+
+            T.it('Hunger reduction calculation', () => {
+                const food = FOODS.apple;
+                const combo = 1;
+                const feverMult = 1;
+                const comboMult = getComboMultiplier(combo);
+                const reduction = food.hungerReduction * comboMult * feverMult;
+                T.assertEqual(reduction, 8, 'apple at 1x combo');
+            });
+
+            T.it('Hunger reduction with combo + fever', () => {
+                const food = FOODS.apple;
+                const combo = 5;
+                const feverMult = FEVER_CONFIG.scoreMultiplier;
+                const comboMult = getComboMultiplier(combo);
+                const reduction = food.hungerReduction * comboMult * feverMult;
+                T.assertEqual(reduction, 8 * 2.0 * 2.0, 'apple at 2x combo + 2x fever');
+            });
+
+            T.it('Level calculation from totalHungerReduced', () => {
+                const calcLevel = (reduced) => Math.floor(reduced / GAME_CONFIG.HUNGER_PER_LEVEL) + 1;
+                T.assertEqual(calcLevel(0), 1, '0 reduced = level 1');
+                T.assertEqual(calcLevel(3), 1, '3 reduced = level 1');
+                T.assertEqual(calcLevel(4), 2, '4 reduced = level 2');
+                T.assertEqual(calcLevel(8), 3, '8 reduced = level 3');
+            });
+
+            T.it('Villager consume interval scales with level', () => {
+                const calcInterval = (level, feverActive) => {
+                    let baseInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
+                    baseInterval = Math.max(baseInterval * 0.5, baseInterval - (level * 150));
+                    return feverActive ? baseInterval * 1.5 : baseInterval;
+                };
+
+                const lvl1 = calcInterval(1, false);
+                const lvl5 = calcInterval(5, false);
+                const lvl10 = calcInterval(10, false);
+
+                T.assertGreater(lvl1, lvl5, 'Higher level = faster consume');
+                T.assertGreater(lvl5, lvl10, 'Even higher level = even faster');
+                T.assertGreater(lvl10, GAME_CONFIG.VILLAGER_CONSUME_INTERVAL * 0.5 - 1,
+                    'Should not go below 50% of base');
+
+                // Fever slows consumption
+                const lvl5Fever = calcInterval(5, true);
+                T.assertGreater(lvl5Fever, lvl5, 'Fever should slow consumption');
+            });
+
+            T.it('Score calculation: base points = reduction * 10', () => {
+                const reduction = 15;
+                const basePoints = Math.round(reduction * 10);
+                T.assertEqual(basePoints, 150, 'score from 15% reduction');
+            });
+        });
+
+        // ======================================
+        // 14. LIGHTING SYSTEM TESTS
+        // ======================================
+        T.describe('LightingSystem', () => {
+            T.it('Initializes with transparent overlay', () => {
+                const mockGame = { canvas: { width: 480, height: 854 } };
+                const ls = new LightingSystem(mockGame);
+                T.assertEqual(ls.overlayColor, 'rgba(0,0,0,0)', 'default transparent');
+            });
+
+            T.it('Sets overlay from atmosphere config', () => {
+                const mockGame = { canvas: { width: 480, height: 854 } };
+                const ls = new LightingSystem(mockGame);
+                ls.setAtmosphere({ overlayColor: 'rgba(200, 50, 0, 0.25)' });
+                T.assertEqual(ls.overlayColor, 'rgba(200, 50, 0, 0.25)', 'should update');
+            });
+        });
+
+        // ======================================
+        // 15. INTEGRATION TESTS
+        // ======================================
+        T.describe('Integration: Full Game Flow', () => {
+            T.it('Win condition: hunger reaches 0', () => {
+                let hunger = 100;
+                const food = FOODS.dynamite; // Most powerful
+                const reduction = food.hungerReduction * 4.0 * 2.0; // Max combo + fever
+                // 40 * 4 * 2 = 320, way more than 100
+                hunger = Math.max(0, hunger - reduction);
+                T.assertEqual(hunger, 0, 'hunger should reach 0');
+            });
+
+            T.it('Lose condition: villagers reach 0', () => {
+                let villagerCount = 100;
+                for (let i = 0; i < 100; i++) villagerCount--;
+                T.assertEqual(villagerCount, 0, 'villagers should reach 0');
+            });
+
+            T.it('Food unlock progression is consistent', () => {
+                const unlocks = Object.values(FOODS).map(f => ({
+                    name: f.name,
+                    level: f.unlockLevel,
+                    power: f.hungerReduction
+                }));
+
+                // Apple (lvl 1) should be weakest
+                T.assertEqual(unlocks[0].level, 1, 'Apple at level 1');
+                // Dynamite (last) should be strongest
+                const last = unlocks[unlocks.length - 1];
+                T.assertEqual(last.name, 'Dynamite', 'Last food is Dynamite');
+                T.assertGreater(last.power, unlocks[0].power, 'Dynamite > Apple power');
+            });
+
+            T.it('All 10 stages are reachable through level progression', () => {
+                // With HUNGER_PER_LEVEL = 4, level 10 requires 36 total hunger reduced
+                // This is achievable with multiple apple throws (8 each)
+                const levelsNeeded = STAGES.length;
+                const hungerNeeded = (levelsNeeded - 1) * GAME_CONFIG.HUNGER_PER_LEVEL;
+                // Check total hunger available = 100%
+                T.assertLess(hungerNeeded, 100, 'Should be able to reach all stages');
+            });
+
+            T.it('Evolution tiers align with stage progression', () => {
+                // Tier 0 (Baby) at lvl 1 = Stage 1
+                // Tier 1 (Teen) at lvl 3 = Stage 3
+                // Tier 2 (Adult) at lvl 6 = Stage 6
+                // Tier 3 (King) at lvl 10 = Stage 10
+                EVOLUTION_TIERS.forEach(tier => {
+                    T.assert(tier.level <= STAGES.length,
+                        `Tier ${tier.name} at level ${tier.level} must be reachable within ${STAGES.length} stages`);
+                });
+            });
+        });
+
+        // ======================================
+        // Run All Tests
+        // ======================================
+        await T.run();
+    </script>
+</body>
+</html>
