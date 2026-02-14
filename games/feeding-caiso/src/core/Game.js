@@ -227,7 +227,7 @@ export class Game {
         if (this.caiso.updateEvolution(this.level)) {
             const tier = EVOLUTION_TIERS[this.caiso.evolutionTier];
             this.addFloatingText(`EVOLVED: ${tier.name}!`, GAME_CONFIG.WIDTH / 2, 200, '#a29bfe');
-            this.addParticles(GAME_CONFIG.WIDTH / 2, 180, '#a29bfe', 35);
+            this.addParticles(GAME_CONFIG.WIDTH / 2, 180, '#a29bfe', 15);
             this.audio.play('levelup');
         }
 
@@ -241,9 +241,8 @@ export class Game {
             this.audio.play('combo');
         }
 
-        this.addParticles(mouthPos.x, mouthPos.y, foodData.color, 15);
-        this.shake.trigger(5, 150);
-        this.freeze.trigger(40);
+        this.addParticles(mouthPos.x, mouthPos.y, foodData.color, 8);
+        this.shake.trigger(2, 80);
         this.caiso.eat();
         this.audio.play('eat');
 
@@ -255,7 +254,7 @@ export class Game {
     levelUp(newLevel) {
         this.level = newLevel;
         this.addFloatingText(`LEVEL ${newLevel}!`, GAME_CONFIG.WIDTH / 2, 120, '#74b9ff');
-        this.addParticles(GAME_CONFIG.WIDTH / 2, 100, '#74b9ff', 25);
+        this.addParticles(GAME_CONFIG.WIDTH / 2, 100, '#74b9ff', 12);
         this.audio.play('levelup');
 
         Object.entries(FOODS).forEach(([key, food]) => {
@@ -293,7 +292,7 @@ export class Game {
             closestVillager.beingEaten = true;
             this.villagerCount--;
             this.addFloatingText('-1', 60, GAME_CONFIG.HEIGHT - 100, '#ff7675');
-            this.shake.trigger(8, 200);
+            this.shake.trigger(3, 100);
             this.caiso.showGuilty();
 
             if (this.villagerCount > 0) {
@@ -311,7 +310,7 @@ export class Game {
         this.caiso.expression = state === 'victory' ? 'happy' : 'sad';
 
         if (state === 'victory') {
-            this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#74b9ff', 60);
+            this.addParticles(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 3, '#74b9ff', 20);
             this.audio.play('levelup');
         } else {
             this.audio.play('gameover');

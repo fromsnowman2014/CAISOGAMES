@@ -24,7 +24,7 @@ export class FeverMode {
         this.timer = this.duration;
         this.screenFlash = 1;
 
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 15; i++) {
             this.particles.push(this.createParticle());
         }
     }
@@ -34,9 +34,9 @@ export class FeverMode {
         return {
             x: Math.random() * GAME_CONFIG.WIDTH,
             y: Math.random() * GAME_CONFIG.HEIGHT * 0.6,
-            vx: (Math.random() - 0.5) * 12,
-            vy: (Math.random() - 0.5) * 12,
-            size: Math.random() * 12 + 6,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 0.5) * 5,
+            size: Math.random() * 8 + 4,
             color: colors[Math.floor(Math.random() * colors.length)],
             life: 800 + Math.random() * 400
         };
@@ -48,7 +48,7 @@ export class FeverMode {
             if (this.timer <= 0) {
                 this.deactivate();
             }
-            if (Math.random() < 0.4) {
+            if (Math.random() < 0.15) {
                 this.particles.push(this.createParticle());
             }
         }
@@ -63,7 +63,7 @@ export class FeverMode {
         });
 
         if (this.screenFlash > 0) {
-            this.screenFlash -= deltaTime * 0.003;
+            this.screenFlash -= deltaTime * 0.006;
         }
     }
 
@@ -74,7 +74,7 @@ export class FeverMode {
 
     draw(ctx) {
         if (this.screenFlash > 0) {
-            ctx.fillStyle = `rgba(116, 185, 255, ${this.screenFlash * 0.2})`;
+            ctx.fillStyle = `rgba(116, 185, 255, ${this.screenFlash * 0.08})`;
             ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
         }
 
