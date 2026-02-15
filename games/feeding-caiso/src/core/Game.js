@@ -5,6 +5,7 @@ import { VirtualJoystick } from './Input.js';
 import { ParallaxSystem } from '../systems/ParallaxSystem.js';
 import { ParticleSystem } from '../systems/ParticleSystem.js';
 import { FeverMode } from '../utils/FeverMode.js';
+import { DistanceBarGauge } from '../utils/DistanceBarGauge.js';
 import { ScreenShake, ImpactFrame } from '../utils/Juice.js';
 import { Caiso } from '../entities/Caiso.js';
 import { Player } from '../entities/Player.js';
@@ -54,6 +55,7 @@ export class Game {
         this.player = new Player();
         this.joystick = new VirtualJoystick(canvas);
         this.fever = new FeverMode();
+        this.distanceBar = new DistanceBarGauge();  // PHASE 7.3: Timing gauge
         this.shake = new ScreenShake();
         this.freeze = new ImpactFrame();
 
@@ -162,6 +164,7 @@ export class Game {
         this.floatingTexts = [];
         this.caiso.reset();
         this.fever = new FeverMode();
+        this.distanceBar.reset();  // PHASE 7.3: Reset timing gauge
         this.particleSystem.clearEmitters();
         this.particleSystem.active = [];
         this.stageManager.init();
@@ -200,19 +203,44 @@ export class Game {
         const food = FOODS[this.selectedFoodKey];
         if (food.unlockLevel > this.level) return;
 
+        // PHASE 7.3: Check timing and get power level
+        const timing = this.distanceBar.checkTiming();
+        this.distanceBar.triggerFeedback(timing);
+
         this.player.throw();
         this.audio.play('throw');
 
         const mouthPos = this.caiso.getMouthPosition();
-        this.flyingFoods.push(new Food(
+        const newFood = new Food(
             food,
             this.player.x,
             this.player.y - 40,
             mouthPos.x,
             mouthPos.y,
             this.assets
-        ));
+        );
 
+        // PHASE 7.3: Apply power level from timing
+        newFood.powerLevel = timing.power;
+
+        // PHASE 7.3: Handle timing results
+        if (timing.result === 'miss') {
+            // Miss: Food falls short or overshoots
+            newFood.duration = 250;  // Shorter flight time
+            this.combo = 0;  // Break combo on miss
+            this.addFloatingText('MISS!', this.player.x, this.player.y - 80, timing.color);
+            this.audio.play('miss');  // TODO: Add miss sound
+        } else if (timing.result === 'perfect') {
+            // Perfect: Bonus points and visual feedback
+            this.addFloatingText('PERFECT!', this.player.x, this.player.y - 80, timing.color);
+            this.score += 50;  // Bonus points for perfect timing
+            this.addParticles(this.player.x, this.player.y - 40, timing.color, 8);
+        } else {
+            // Good: Standard feedback
+            this.addFloatingText('GOOD', this.player.x, this.player.y - 80, timing.color);
+        }
+
+        this.flyingFoods.push(newFood);
         this.comboTimer = GAME_CONFIG.COMBO_TIMEOUT;
     }
 
@@ -395,6 +423,10 @@ export class Game {
         this.player.update(deltaTime, this.joystick);
         this.fever.update(deltaTime);
 
+        // PHASE 7.3: Update distance bar gauge
+        this.distanceBar.update(deltaTime);
+        this.distanceBar.setDifficulty(this.stageManager.currentStageIndex);
+
         // Slippery floor effect on player
         if (this.environment.slipperyFloor) {
             this.player.friction = 0.94; // More slippery (default is 0.88)
@@ -500,16 +532,22 @@ export class Game {
         this.flyingFoods.forEach(food => food.draw(ctx));
         this.hazards.forEach(h => h.draw(ctx));
 
-        // 8. Fever gauge
+        // 8. PHASE 7.3: Trajectory preview (shows where food will land)
+        this.drawTrajectoryPreview(ctx);
+
+        // 9. PHASE 7.3: Distance bar gauge (timing system)
+        this.distanceBar.draw(ctx);
+
+        // 10. Fever gauge
         this.fever.drawGauge(ctx);
 
-        // 9. Score display
+        // 11. Score display
         ctx.font = 'bold 14px Fredoka One';
         ctx.textAlign = 'right';
         ctx.fillStyle = 'rgba(223, 230, 233, 0.7)';
         ctx.fillText(`SCORE: ${this.score}`, GAME_CONFIG.WIDTH - 15, GAME_CONFIG.HEIGHT - 155);
 
-        // 10. Stage name (bottom left, subtle)
+        // 12. Stage name (bottom left, subtle)
         if (this.stageManager.currentConfig) {
             ctx.font = '12px Nunito';
             ctx.textAlign = 'left';
@@ -517,7 +555,7 @@ export class Game {
             ctx.fillText(this.stageManager.currentConfig.name, 15, GAME_CONFIG.HEIGHT - 155);
         }
 
-        // 11. Floating texts
+        // 13. Floating texts
         ctx.font = 'bold 22px Fredoka One';
         ctx.textAlign = 'center';
         this.floatingTexts.forEach(t => {
@@ -532,6 +570,63 @@ export class Game {
 
         // 13. Stage transition overlay (topmost)
         this.stageManager.draw(ctx);
+
+        ctx.restore();
+    }
+
+    /**
+     * PHASE 7.3B: Draw trajectory preview showing where food will land
+     * based on current needle position
+     *
+     * Uses quadratic bezier curve to simulate food flight path
+     * Color-coded to match timing result (green/yellow/red)
+     */
+    drawTrajectoryPreview(ctx) {
+        if (this.state !== 'playing') return;
+
+        const timing = this.distanceBar.checkTiming();
+        const power = timing.power;
+
+        // Calculate start and end positions
+        const startX = this.player.x;
+        const startY = this.player.y - 40;
+        const mouthPos = this.caiso.getMouthPosition();
+
+        // Apply power multiplier to distance (same as Food.js)
+        const distanceMultiplier = 0.5 + power * 0.5;
+        const targetX = startX + (mouthPos.x - startX) * distanceMultiplier;
+        const targetY = mouthPos.y;
+
+        // Calculate control point for arc (mid-point with height)
+        const midX = (startX + targetX) / 2;
+        const midY = Math.min(startY, targetY) - 120;  // Arc height
+
+        // Draw dotted trajectory arc
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = timing.color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 8]);  // Dotted line pattern
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(midX, midY, targetX, targetY);
+        ctx.stroke();
+
+        // Draw landing indicator (circle at end point)
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = timing.color;
+        ctx.beginPath();
+        ctx.arc(targetX, targetY, 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw inner circle
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#dfe6e9';
+        ctx.beginPath();
+        ctx.arc(targetX, targetY, 6, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
     }

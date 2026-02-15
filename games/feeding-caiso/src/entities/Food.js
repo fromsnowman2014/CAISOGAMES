@@ -15,6 +15,10 @@ export class Food {
         this.arrived = false;
         this.blocked = false;
         this.driftX = 0;
+
+        // PHASE 7.3C: Power level from timing gauge (0-1)
+        // Applied to distance multiplier: 0.5 (weak) to 1.0 (strong)
+        this.powerLevel = 0.5;  // Default to center if not set
     }
 
     update(deltaTime, environment) {
@@ -26,9 +30,17 @@ export class Food {
             this.driftX += environment.windX * (deltaTime / 16);
         }
 
+        // PHASE 7.3C: Apply power level to distance
+        // Power range: 0-1 → Distance multiplier: 0.5-1.0
+        // - powerLevel 0.0 (left edge) = 0.5x distance (too weak, falls short)
+        // - powerLevel 0.5 (center) = 0.75x distance (good)
+        // - powerLevel 1.0 (right edge) = 1.0x distance (too strong, overshoots)
+        // Perfect zone (0.4-0.6) maps to ~0.7-0.8x for good gameplay
+        const distanceMultiplier = 0.5 + this.powerLevel * 0.5;
+
         // Ease out
         const t = 1 - Math.pow(1 - this.progress, 3);
-        this.x = this.startX + (this.endX - this.startX) * t + this.driftX;
+        this.x = this.startX + ((this.endX - this.startX) * distanceMultiplier) * t + this.driftX;
 
         // Arc trajectory
         let gravityScale = environment ? environment.gravityY : 1.0;
