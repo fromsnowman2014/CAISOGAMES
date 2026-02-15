@@ -31,7 +31,7 @@ export class DistanceBarGauge {
         // Needle state
         this.needlePosition = 0.5;  // Normalized 0-1 (0=left, 1=right)
         this.direction = 1;         // 1=moving right, -1=moving left
-        this.baseSpeed = 0.0015;    // Speed per millisecond
+        this.baseSpeed = 0.0008;    // Speed per millisecond (reduced for easier start)
         this.speedMultiplier = 1.0; // Stage difficulty multiplier
 
         // Zone definitions (normalized positions 0-1)
@@ -158,29 +158,30 @@ export class DistanceBarGauge {
 
     /**
      * Set difficulty based on current stage
-     * Needle moves faster in later stages
+     * Exponential difficulty scaling for gradual progression
      *
-     * Stage 1-2:  1.0x speed (easy)
-     * Stage 3-4:  1.2x speed
-     * Stage 5-7:  1.5x speed
-     * Stage 8-9:  2.0x speed
-     * Stage 10+:  2.5x speed (very fast)
+     * Stage 1:    0.35x  - Very easy (tutorial - can easily clear)
+     * Stage 2:    0.39x  - Still very easy
+     * Stage 3:    0.44x  - Easy
+     * Stage 4:    0.49x  - Still comfortable
+     * Stage 5:    0.55x  - Getting slightly harder
+     * Stage 6:    0.61x  - Medium-easy
+     * Stage 7:    0.68x  - Medium
+     * Stage 8:    0.76x  - Starting challenge
+     * Stage 9:    0.85x  - Challenging
+     * Stage 10:   0.95x  - Hard (exponential growth visible)
      */
     setDifficulty(stageIndex) {
-        const speedMap = {
-            0: 1.0,   // Stage 1-2
-            1: 1.0,
-            2: 1.2,   // Stage 3-4
-            3: 1.2,
-            4: 1.5,   // Stage 5-7
-            5: 1.5,
-            6: 1.5,
-            7: 2.0,   // Stage 8-9
-            8: 2.0,
-            9: 2.5    // Stage 10+
-        };
+        // Exponential growth formula: baseMultiplier * (1 + growthRate)^stage
+        // This creates smooth exponential difficulty curve
+        const baseMultiplier = 0.35;  // Much slower starting speed (35% of original)
+        const growthRate = 0.11;      // 11% increase per stage (gentler exponential)
 
-        this.speedMultiplier = speedMap[stageIndex] || 2.5;
+        // Calculate exponential multiplier
+        const exponentialMultiplier = baseMultiplier * Math.pow(1 + growthRate, stageIndex);
+
+        // Cap at reasonable maximum to prevent impossible difficulty
+        this.speedMultiplier = Math.min(exponentialMultiplier, 2.0);
     }
 
     /**

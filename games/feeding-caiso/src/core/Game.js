@@ -46,6 +46,9 @@ export class Game {
         // PHASE 7.2: Space bar spam prevention
         this.spacePressed = false;
 
+        // PHASE 7.3: Track current stage for difficulty
+        this.currentStage = 0;
+
         this.villagers = [];
         this.flyingFoods = [];
         this.hazards = [];
@@ -159,12 +162,14 @@ export class Game {
         this.comboTimer = 0;
         this.consumeInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
         this.spacePressed = false; // PHASE 7.2: Reset spam flag
+        this.currentStage = 0; // PHASE 7.3: Reset stage tracking
         this.flyingFoods = [];
         this.hazards = [];
         this.floatingTexts = [];
         this.caiso.reset();
         this.fever = new FeverMode();
         this.distanceBar.reset();  // PHASE 7.3: Reset timing gauge
+        this.distanceBar.setDifficulty(0); // PHASE 7.3: Set initial difficulty for stage 1
         this.particleSystem.clearEmitters();
         this.particleSystem.active = [];
         this.stageManager.init();
@@ -425,7 +430,13 @@ export class Game {
 
         // PHASE 7.3: Update distance bar gauge
         this.distanceBar.update(deltaTime);
-        this.distanceBar.setDifficulty(this.stageManager.currentStageIndex);
+
+        // PHASE 7.3: Only update difficulty when stage changes (not every frame)
+        if (this.currentStage !== this.stageManager.currentStageIndex) {
+            this.currentStage = this.stageManager.currentStageIndex;
+            this.distanceBar.setDifficulty(this.currentStage);
+            console.log(`Stage ${this.currentStage + 1} - Difficulty: ${this.distanceBar.speedMultiplier.toFixed(2)}x`);
+        }
 
         // Slippery floor effect on player
         if (this.environment.slipperyFloor) {
