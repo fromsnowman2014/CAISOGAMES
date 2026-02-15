@@ -42,6 +42,9 @@ export class Game {
         this.comboTimer = 0;
         this.consumeInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
 
+        // PHASE 7.2: Space bar spam prevention
+        this.spacePressed = false;
+
         this.villagers = [];
         this.flyingFoods = [];
         this.hazards = [];
@@ -89,6 +92,7 @@ export class Game {
 
     setupEventListeners() {
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        document.addEventListener('keyup', (e) => this.handleKeyUp(e)); // PHASE 7.2
         const feedBtn = document.getElementById('touchFeedBtn');
         if (feedBtn) feedBtn.addEventListener('click', () => this.feedCaiso());
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
@@ -97,12 +101,23 @@ export class Game {
     handleKeyDown(e) {
         if (e.code === 'Space') {
             e.preventDefault();
+            // PHASE 7.2: Prevent space bar spam
+            if (this.spacePressed) return;
+            this.spacePressed = true;
+
             if (this.state === 'menu') this.startGame();
             else if (this.state === 'playing') this.feedCaiso();
         } else if (e.code === 'KeyR') {
             if (this.state === 'gameover' || this.state === 'victory') this.startGame();
         } else if (e.key >= '1' && e.key <= '6') {
             this.selectFoodByKey(e.key);
+        }
+    }
+
+    // PHASE 7.2: Reset space bar flag on key release
+    handleKeyUp(e) {
+        if (e.code === 'Space') {
+            this.spacePressed = false;
         }
     }
 
@@ -141,6 +156,7 @@ export class Game {
         this.villagerTimer = 0;
         this.comboTimer = 0;
         this.consumeInterval = GAME_CONFIG.VILLAGER_CONSUME_INTERVAL;
+        this.spacePressed = false; // PHASE 7.2: Reset spam flag
         this.flyingFoods = [];
         this.hazards = [];
         this.floatingTexts = [];
@@ -171,6 +187,15 @@ export class Game {
 
     feedCaiso() {
         if (this.state !== 'playing') return;
+
+        // PHASE 7.2: Prevent touch button spam (same as space bar)
+        if (this.spacePressed) return;
+        this.spacePressed = true;
+
+        // Reset flag after a short delay (for touch button)
+        setTimeout(() => {
+            this.spacePressed = false;
+        }, 100);
 
         const food = FOODS[this.selectedFoodKey];
         if (food.unlockLevel > this.level) return;

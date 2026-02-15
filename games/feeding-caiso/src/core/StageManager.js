@@ -9,7 +9,7 @@ export class StageManager {
         this.stageTimer = 0;
         this.isTransitioning = false;
         this.transitionAlpha = 0;
-        this.transitionDuration = 1200;
+        this.transitionDuration = 600; // Reduced from 1200ms for child safety
         this.transitionTimer = 0;
         this.pendingStageIndex = -1;
         this.hazardTimer = 0;
@@ -95,16 +95,19 @@ export class StageManager {
             this.transitionTimer += deltaTime;
             const progress = this.transitionTimer / this.transitionDuration;
 
+            // PHASE 7.1 SAFETY: Cap alpha at 0.3 to avoid scary full blackout for children
+            const MAX_ALPHA = 0.3;
+
             if (progress < 0.5) {
-                this.transitionAlpha = progress * 2;
+                this.transitionAlpha = Math.min(progress * 2 * MAX_ALPHA, MAX_ALPHA);
             } else if (progress < 0.55) {
                 if (this.pendingStageIndex >= 0) {
                     this.loadStage(this.pendingStageIndex);
                     this.pendingStageIndex = -1;
                 }
-                this.transitionAlpha = 1;
+                this.transitionAlpha = MAX_ALPHA;
             } else {
-                this.transitionAlpha = 1 - ((progress - 0.5) * 2);
+                this.transitionAlpha = Math.max(0, MAX_ALPHA * (1 - ((progress - 0.5) * 2)));
             }
 
             if (progress >= 1) {
@@ -174,10 +177,34 @@ export class StageManager {
             ctx.restore();
         }
 
-        // Transition overlay
+        // PHASE 7.1 SAFETY: Child-friendly sparkle transition (NOT scary black screen)
         if (this.isTransitioning && this.transitionAlpha > 0) {
-            ctx.fillStyle = `rgba(0, 0, 0, ${this.transitionAlpha})`;
-            ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+            const progress = this.transitionTimer / this.transitionDuration;
+
+            ctx.save();
+            // Draw magical sparkle particles spreading from center
+            for (let i = 0; i < 25; i++) {
+                const angle = (i / 25) * Math.PI * 2 + progress * Math.PI * 0.5;
+                const distance = progress * 450;
+                const x = GAME_CONFIG.WIDTH / 2 + Math.cos(angle) * distance;
+                const y = GAME_CONFIG.HEIGHT / 2 + Math.sin(angle) * distance;
+
+                // Alternate between Soul Blue (#74b9ff) and Void Purple (#a29bfe)
+                ctx.fillStyle = i % 2 === 0 ? '#74b9ff' : '#a29bfe';
+                ctx.globalAlpha = (1 - progress) * this.transitionAlpha * 1.5;
+
+                const size = 3 + Math.sin(progress * Math.PI * 2 + i) * 2;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Add subtle sparkle "twinkle" effect
+                ctx.globalAlpha = (1 - progress) * this.transitionAlpha * 0.8;
+                ctx.beginPath();
+                ctx.arc(x, y, size * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
         }
     }
 }
